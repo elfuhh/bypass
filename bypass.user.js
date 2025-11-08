@@ -9,5 +9,5 @@
 // @run-at       document-start
 // @grant        unsafeWindow
 // @icon         https://cdn.discordapp.com/avatars/907504823325294642/9701f48d983a8f728695f3b5b7b12b91.png?size=1024
-// @require      https://github.com/ricogiantz/bypass/raw/main/bypass.js
+// @require      https://raw.githubusercontent.com/elfuhh/bypass/refs/heads/main/bypass.js
 // ==/UserScript==
