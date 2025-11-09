@@ -4,7 +4,7 @@
     const host = location.hostname;
     const debug = true;
 
-    // ---------- Translations used by imported GUI (from 1st code) ----------
+    // ---------- translations used by the imported GUI ----------
     let currentLanguage = localStorage.getItem('lang') || 'vi';
     const translations = {
         vi: {
@@ -15,6 +15,8 @@
             bypassSuccessCopy: "Bypass thành công, đã Copy Key (bấm 'Cho Phép' nếu có)",
             waitingCaptcha: "Đang chờ CAPTCHA...",
             pleaseReload: "Vui lòng tải lại trang...(workink lỗi)",
+            reloading: "đã giả mạo tải lại...",
+            socialsdetected: "các mạng xã hội được phát hiện bắt đầu giả mạo...",
             bypassSuccess: "Bypass thành công",
             backToCheckpoint: "Đang về lại Checkpoint...",
             captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
@@ -29,6 +31,8 @@
             bypassSuccessCopy: "Bypass successful! Key copied (click 'Allow' if prompted)",
             waitingCaptcha: "Waiting for CAPTCHA...",
             pleaseReload: "Please reload the page...(workink bugs)",
+            reloading: "done spoofing reloading...",
+            socialsdetected:"socials detected beginning to spoof...",
             bypassSuccess: "Bypass successful",
             backToCheckpoint: "Returning to checkpoint...",
             captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
@@ -74,8 +78,12 @@
         }
 
         init() {
-            this.createPanel();
-            this.setupEventListeners();
+            try {
+                this.createPanel();
+                this.setupEventListeners();
+            } catch (e) {
+                if (debug) console.error('GUI init error', e);
+            }
         }
 
         createPanel() {
@@ -105,14 +113,8 @@
                 }
 
                 @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateX(100px) scale(0.9);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0) scale(1);
-                    }
+                    from { opacity: 0; transform: translateX(100px) scale(0.9); }
+                    to { opacity: 1; transform: translateX(0) scale(1); }
                 }
 
                 .header {
@@ -125,333 +127,44 @@
                     align-items: center;
                 }
 
-                .header::before {
-                    content: '';
-                    position: absolute;
-                    top: -50%;
-                    left: -50%;
-                    width: 200%;
-                    height: 200%;
-                    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-                    animation: shine 3s infinite;
-                }
+                .title { font-size: 20px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index:1; }
+                .minimize-btn { background: rgba(255,255,255,0.15); border:none; color:#fff; width:32px; height:32px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:20px; font-weight:700; z-index:1; }
 
-                @keyframes shine {
-                    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-                    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-                }
+                .status-section { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; }
+                .status-box { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
+                .status-content { display:flex; align-items:center; gap:12px; position:relative; z-index:1; }
+                .status-dot { width:14px; height:14px; border-radius:50%; animation: pulse 2s ease-in-out infinite; box-shadow: 0 0 12px currentColor; flex-shrink:0; }
+                @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.7;transform:scale(1.15);} }
+                .status-dot.info { background: #60a5fa; } .status-dot.success { background:#4ade80; } .status-dot.warning { background:#facc15; } .status-dot.error { background:#f87171; }
+                .status-text { color:#fff; font-size:14px; font-weight:500; flex:1; line-height:1.5; }
 
-                .title {
-                    font-size: 20px;
-                    font-weight: 700;
-                    color: #fff;
-                    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                    position: relative;
-                    z-index: 1;
-                }
+                .panel-body { max-height:500px; overflow:hidden; transition:all 0.3s ease; opacity:1; }
+                .panel-body.hidden { max-height:0; opacity:0; }
 
-                .minimize-btn {
-                    background: rgba(255,255,255,0.15);
-                    border: none;
-                    color: #fff;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.2s;
-                    font-size: 20px;
-                    font-weight: 700;
-                    position: relative;
-                    z-index: 1;
-                }
+                .language-section { padding:16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+                .lang-toggle { display:flex; gap:10px; }
+                .lang-btn { flex:1; background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:1px; }
 
-                .minimize-btn:hover {
-                    background: rgba(255,255,255,0.3);
-                    transform: scale(1.1);
-                }
+                .info-section { padding:16px 20px; background: rgba(0,0,0,0.2); }
+                .version, .credit { color: rgba(255,255,255,0.6); font-size:12px; font-weight:500; text-align:center; margin-bottom:8px; }
 
-                .status-section {
-                    padding: 20px;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                    position: relative;
-                }
+                .links { display:flex; justify-content:center; gap:16px; font-size:11px; }
+                .links a { color: #667eea; text-decoration:none; transition:all 0.2s; }
 
-                .status-box {
-                    background: rgba(255,255,255,0.05);
-                    border-radius: 12px;
-                    padding: 16px;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .status-box::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
-                    animation: shimmer 2s infinite;
-                }
-
-                @keyframes shimmer {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(100%); }
-                }
-
-                .status-content {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    position: relative;
-                    z-index: 1;
-                }
-
-                .status-dot {
-                    width: 14px;
-                    height: 14px;
-                    border-radius: 50%;
-                    animation: pulse 2s ease-in-out infinite;
-                    box-shadow: 0 0 12px currentColor;
-                    flex-shrink: 0;
-                }
-
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; transform: scale(1); }
-                    50% { opacity: 0.7; transform: scale(1.15); }
-                }
-
-                .status-dot.info { background: #60a5fa; }
-                .status-dot.success { background: #4ade80; }
-                .status-dot.warning { background: #facc15; }
-                .status-dot.error { background: #f87171; }
-
-                .status-text {
-                    color: #fff;
-                    font-size: 14px;
-                    font-weight: 500;
-                    flex: 1;
-                    line-height: 1.5;
-                }
-
-                .panel-body {
-                    max-height: 500px;
-                    overflow: hidden;
-                    transition: all 0.3s ease;
-                    opacity: 1;
-                }
-
-                .panel-body.hidden {
-                    max-height: 0;
-                    opacity: 0;
-                }
-
-                .language-section {
-                    padding: 16px 20px;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                }
-
-                .lang-toggle {
-                    display: flex;
-                    gap: 10px;
-                }
-
-                .lang-btn {
-                    flex: 1;
-                    background: rgba(255,255,255,0.05);
-                    border: 2px solid rgba(255,255,255,0.1);
-                    color: #fff;
-                    padding: 10px;
-                    border-radius: 10px;
-                    cursor: pointer;
-                    font-weight: 600;
-                    font-size: 14px;
-                    transition: all 0.2s;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                }
-
-                .lang-btn:hover {
-                    background: rgba(255,255,255,0.1);
-                    transform: translateY(-2px);
-                }
-
-                .lang-btn.active {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    border-color: #667eea;
-                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-                }
-
-                .info-section {
-                    padding: 16px 20px;
-                    background: rgba(0,0,0,0.2);
-                }
-
-                .version {
-                    color: rgba(255,255,255,0.6);
-                    font-size: 12px;
-                    font-weight: 500;
-                    margin-bottom: 8px;
-                    text-align: center;
-                }
-
-                .credit {
-                    color: rgba(255,255,255,0.6);
-                    font-size: 12px;
-                    font-weight: 500;
-                    text-align: center;
-                    margin-bottom: 8px;
-                }
-
-                .credit-author {
-                    color: #667eea;
-                    font-weight: 700;
-                }
-
-                .links {
-                    display: flex;
-                    justify-content: center;
-                    gap: 16px;
-                    font-size: 11px;
-                }
-
-                .links a {
-                    color: #667eea;
-                    text-decoration: none;
-                    transition: all 0.2s;
-                }
-
-                .links a:hover {
-                    color: #764ba2;
-                    text-decoration: underline;
-                }
-
-                /* --- Slider styles (Dyrian-themed & animated) --- */
-                .slider-container {
-                    display: none;
-                    padding: 12px 0 0 0;
-                    animation: fadeIn 0.4s ease;
-                    margin-top: 12px;
-                }
-
-                .slider-container.active {
-                    display: block;
-                }
-
-                .slider-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin: 0 20px 8px 20px;
-                }
-
-                .slider-label {
-                    color: rgba(255,255,255,0.9);
-                    font-size: 13px;
-                    font-weight: 600;
-                }
-
-                .slider-value {
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                }
-
-                .slider-track {
-                    position: relative;
-                    margin: 0 20px 12px 20px;
-                }
-
-                .slider {
-                    width: 100%;
-                    height: 8px;
-                    border-radius: 6px;
-                    background: linear-gradient(90deg,#2b3440 0%, #27323f 100%);
-                    outline: none;
-                    -webkit-appearance: none;
-                    cursor: pointer;
-                    transition: all 0.25s ease;
-                }
-
-                .slider::-webkit-slider-thumb {
-                    -webkit-appearance: none;
-                    appearance: none;
-                    width: 18px;
-                    height: 18px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg,#667eea 0%, #764ba2 100%);
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    box-shadow: 0 6px 14px rgba(102,126,234,0.28);
-                    border: 2px solid rgba(255,255,255,0.08);
-                }
-
-                .slider::-webkit-slider-thumb:hover {
-                    transform: scale(1.12);
-                }
-
-                .slider::-moz-range-thumb {
-                    width: 18px;
-                    height: 18px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg,#667eea 0%, #764ba2 100%);
-                    cursor: pointer;
-                    border: 2px solid rgba(255,255,255,0.08);
-                    transition: all 0.2s ease;
-                    box-shadow: 0 6px 14px rgba(102,126,234,0.28);
-                }
-
-                .slider::-moz-range-thumb:hover {
-                    transform: scale(1.12);
-                }
-
-                .start-btn {
-                    width: calc(100% - 40px);
-                    margin: 0 20px 16px 20px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border: none;
-                    padding: 10px;
-                    border-radius: 10px;
-                    font-weight: 700;
-                    font-size: 14px;
-                    cursor: pointer;
-                    transition: all 0.18s ease;
-                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-                    box-shadow: 0 6px 18px rgba(102,126,234,0.18);
-                }
-
-                .start-btn:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 10px 24px rgba(102,126,234,0.22);
-                }
-
-                .start-btn:disabled {
-                    background: #4a5d6f;
-                    cursor: not-allowed;
-                    transform: none;
-                    box-shadow: none;
-                }
-
-                @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-
-                @media (max-width: 480px) {
-                    .panel-container {
-                        top: 10px;
-                        right: 10px;
-                        left: 10px;
-                        width: auto;
-                    }
-                }
+                .slider-container { display:none; padding:12px 0 0 0; animation: fadeIn 0.4s ease; margin-top:12px; }
+                .slider-container.active { display:block; }
+                .slider-header { display:flex; justify-content:space-between; align-items:center; margin:0 20px 8px 20px; }
+                .slider-label { color: rgba(255,255,255,0.9); font-size:13px; font-weight:600; }
+                .slider-value { color:#fff; font-size:13px; font-weight:700; }
+                .slider-track { margin:0 20px 12px 20px; }
+                .slider { width:100%; height:8px; border-radius:6px; background: linear-gradient(90deg,#2b3440 0%, #27323f 100%); outline:none; -webkit-appearance:none; cursor:pointer; transition:all .25s; }
+                .slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background: linear-gradient(135deg,#667eea 0%, #764ba2 100%); box-shadow:0 6px 14px rgba(102,126,234,0.28); border:2px solid rgba(255,255,255,0.08); }
+                .start-btn { width: calc(100% - 40px); margin:0 20px 16px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; }
+                @keyframes fadeIn { from {opacity:0} to {opacity:1} }
+                @media (max-width:480px) { .panel-container { top:10px; right:10px; left:10px; width:auto; } }
             `;
-
             this.shadow.appendChild(style);
 
-            // NOTE: slider container placed directly inside the status-section to be right below status text
             const panelHTML = `
                 <div class="panel-container">
                     <div class="panel">
@@ -467,7 +180,6 @@
                                 </div>
                             </div>
 
-                            <!-- Slider placed directly under the status text -->
                             <div class="slider-container" id="slider-container">
                                 <div class="slider-header">
                                     <span class="slider-label">Redirect delay:</span>
@@ -479,6 +191,7 @@
                                 <button class="start-btn" id="start-btn">Start Redirect</button>
                             </div>
                         </div>
+
                         <div class="panel-body" id="panel-body">
                             <div class="language-section">
                                 <div class="lang-toggle">
@@ -488,9 +201,7 @@
                             </div>
                             <div class="info-section">
                                 <div class="version" id="version">${t('version')}</div>
-                                <div class="credit" id="credit">
-                                    ${t('madeBy')}
-                                </div>
+                                <div class="credit" id="credit">${t('madeBy')}</div>
                                 <div class="links">
                                     <a href="https://www.youtube.com/@dyydeptry" target="_blank">YouTube</a>
                                     <a href="https://discord.gg/DWyEfeBCzY" target="_blank">Discord</a>
@@ -513,7 +224,6 @@
             this.body = this.shadow.querySelector('#panel-body');
             this.minimizeBtn = this.shadow.querySelector('#minimize-btn');
 
-            // slider elements
             this.sliderContainer = this.shadow.querySelector('#slider-container');
             this.sliderValue = this.shadow.querySelector('#slider-value');
             this.slider = this.shadow.querySelector('#delay-slider');
@@ -536,13 +246,11 @@
                 this.minimizeBtn.textContent = this.isMinimized ? '+' : '−';
             });
 
-            // slider input updates label and selectedDelay global
             this.slider.addEventListener('input', (e) => {
                 selectedDelay = parseInt(e.target.value);
                 this.sliderValue.textContent = `${selectedDelay}s`;
             });
 
-            // start button triggers callback provided by bypass logic
             this.startBtn.addEventListener('click', () => {
                 if (this.onStartCallback) {
                     try {
@@ -568,7 +276,6 @@
             }
         }
 
-        // show can accept translation keys or raw strings
         show(messageKeyOrTitle, typeOrSubtitle = 'info', replacements = {}) {
             this.currentMessageKey = messageKeyOrTitle;
             this.currentType = (typeof typeOrSubtitle === 'string' && ['info','success','warning','error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
@@ -581,7 +288,6 @@
                     message = typeOrSubtitle;
                 }
             } else {
-                // raw strings case
                 message = (typeof typeOrSubtitle === 'string' && ['info','success','warning','error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
             }
 
@@ -589,31 +295,22 @@
             this.statusDot.className = `status-dot ${this.currentType}`;
         }
 
-        showBypassingWorkink() {
-            this.show('captchaSuccessBypassing', 'success');
-        }
+        showBypassingWorkink() { this.show('captchaSuccessBypassing', 'success'); }
 
         showCaptchaComplete() {
-            // reveal slider and show simplified bypass message
             this.sliderContainer.classList.add('active');
             this.show('bypassSuccess', 'success');
-            // set slider default 0s display when revealed until user moves it
             this.sliderValue.textContent = `${selectedDelay}s`;
         }
 
-        setCallback(callback) {
-            this.onStartCallback = callback;
-        }
+        setCallback(callback) { this.onStartCallback = callback; }
 
         startCountdown(seconds) {
-            // hide slider while counting
             this.sliderContainer.classList.remove('active');
             this.startBtn.disabled = true;
-
             let remaining = seconds;
             this.show('redirectingToWork', 'info');
             this.statusText.textContent = `Redirecting in ${remaining}s...`;
-
             const interval = setInterval(() => {
                 remaining--;
                 if (remaining > 0) {
@@ -629,21 +326,22 @@
     let panel = null;
     let selectedDelay = 0;
     setTimeout(() => {
-        panel = new BypassPanel();
-        panel.show('pleaseSolveCaptcha', 'info');
+        try {
+            panel = new BypassPanel();
+            panel.show('pleaseSolveCaptcha', 'info');
+        } catch (e) {
+            if (debug) console.error('Panel create failed', e);
+        }
     }, 100);
 
-    // ---------- Bypass logic (from difz25x) ----------
-    // We'll keep the Work.ink logic & Volcano logic and integrate with the GUI above.
-    // Many functions were preserved and adapted to call the GUI methods (panel.show, panel.showCaptchaComplete, panel.setCallback, panel.startCountdown).
-
+    // ---------- Bypass logic ----------
     if (host.includes("key.volcano.wtf")) handleVolcano();
     else if (host.includes("work.ink")) handleWorkInk();
 
-    // --- VOLCANO handler (kept) ---
+    // --- VOLCANO (kept mostly unchanged) ---
     function handleVolcano() {
         if (panel) panel.show('pleaseSolveCaptcha', 'info');
-        if (debug) console.log('[Debug] Waiting Captcha');
+        if (debug) console.log('[Debug] Waiting Captcha (Volcano)');
 
         let alreadyDoneContinue = false;
         let alreadyDoneCopy = false;
@@ -664,7 +362,7 @@
                         if (visible && !disabled) {
                             alreadyDoneContinue = true;
                             if (panel) panel.show('captchaSuccess', 'success');
-                            if (debug) console.log('[Debug] Captcha Solved');
+                            if (debug) console.log('[Debug] Captcha Solved (Volcano)');
 
                             setTimeout(() => {
                                 try {
@@ -736,7 +434,7 @@
         }
     }
 
-    // --- WORK.INK handler (kept/adapted) ---
+    // --- WORK.INK (modified social-first persistent check + wait-for-user-captcha) ---
     function handleWorkInk() {
         if (panel) panel.show('pleaseSolveCaptcha', 'info');
 
@@ -759,7 +457,6 @@
             if (!obj || typeof obj !== "object") {
                 return { fn: null, index: -1, name: null };
             }
-
             for (let i = 0; i < candidates.length; i++) {
                 const name = candidates[i];
                 if (typeof obj[name] === "function") {
@@ -773,7 +470,6 @@
             if (!obj || typeof obj !== "object") {
                 return { fn: null, index: -1, name: null };
             }
-
             for (let i in obj) {
                 if (typeof obj[i] === "function" && obj[i].length === 2) {
                     return { fn: obj[i], name: i };
@@ -790,95 +486,121 @@
             ping: 'c_ping'
         };
 
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // New behavior:
+        // - ALWAYS check socials (via periodic check and on linkInfo arrival).
+        // - If socials.length > 1 => enter "socials-only" mode: spoof each social with 1s gap, then wait 3s, then reload. Repeat until <=1.
+        // - If socials.length <= 1 => exit socials-only mode, show "Please solve the CAPTCHA" and DO NOT automatically trigger bypass; wait for the user to solve captcha (turnstile response or other server signals). When the user solves captcha (types.tr or onLinkDestination after captcha), normal bypass flow runs.
         async function checkAndHandleSocials() {
-            if (!linkInfoA || socialCheckInProgress) {
+            if (!linkInfoA) {
+                if (debug) console.log('[Debug] checkAndHandleSocials: no linkInfoA yet');
+                return;
+            }
+            if (socialCheckInProgress) {
+                if (debug) console.log('[Debug] Social check already running');
                 return;
             }
 
-            const socials = linkInfoA.socials || [];
-            if (debug) console.log('[Debug] Checking socials count:', socials.length);
+            let socials = Array.isArray(linkInfoA.socials) ? linkInfoA.socials.slice() : [];
+            if (debug) console.log('[Debug] checkAndHandleSocials: found socials count', socials.length);
 
             if (socials.length > 1) {
+                // Enter socials-only mode: do NOT show "please solve captcha"
                 socialCheckInProgress = true;
                 if (panel) panel.show('Processing Socials', `Found ${socials.length} socials, spoofing with delays...`);
-                if (debug) console.log('[Debug] More than 1 social detected, spoofing with 1000ms delays...');
+                if (debug) console.log('[Debug] Spoofing socials loop start');
 
-                // Spoof all socials with 2000ms delay between each
                 for (let i = 0; i < socials.length; i++) {
                     const soc = socials[i];
                     try {
-                        if (sendMessageA) {
+                        if (sendMessageA && sessionControllerA) {
                             sendMessageA.call(sessionControllerA, types.ss, { url: soc.url });
                             if (debug) console.log(`[Debug] Spoofed social [${i+1}/${socials.length}]:`, soc.url);
                             if (panel) panel.show('Processing Socials', `Spoofed ${i+1}/${socials.length} socials...`);
+                        } else {
+                            if (debug) console.warn('[Debug] sendMessageA not ready; skipping spoof for', soc.url);
                         }
                     } catch (e) {
-                        if (debug) console.error(`[Debug] Error spoofing social [${i+1}/${socials.length}]:`, soc.url, e);
+                        if (debug) console.error('[Debug] Error spoofing social', soc.url, e);
                     }
-
-                    // Wait 2000ms before next social (except after the last one)
-                    if (i < socials.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
+                    // wait 1000ms between social spoofs
+                    if (i < socials.length - 1) await sleep(1000);
                 }
 
-                // Wait a moment for the spoofing to register, then refresh
-                setTimeout(() => {
-                    if (debug) console.log('[Debug] Refreshing page to reduce socials...');
-                    if (panel) panel.show('pleaseReload', 'info');
-                    window.location.reload();
-                }, 4000);
+                // After spoofing all socials, wait 3000ms and then refresh the page to get the updated socials count.
+                if (debug) console.log('[Debug] Completed social spoofing. Waiting 3000ms before reload...');
+                await sleep(3000);
+
+                try { sessionStorage.setItem('dyrian_last_spoof', Date.now().toString()); } catch (e) {}
+                if (panel) panel.show('reloading', 'info');
+                // reload to get updated LinkInfo from server/JS runtime
+                window.location.reload();
+                return;
             } else {
-                if (debug) console.log('[Debug] 1 or fewer socials, proceeding with normal bypass');
-                triggerBypass('social-check-complete');
+                // socials <= 1: exit socials-only mode, show captcha prompt and DO NOT auto-trigger bypass
+                socialCheckInProgress = false;
+                if (debug) console.log('[Debug] Socials <=1: returning to normal captcha UI; waiting for user solve');
+                if (panel) panel.show('pleaseSolveCaptcha', 'info');
+                // Do not call triggerBypass automatically here; wait for user to solve captcha (for example, createSendMessageProxy will trigger on types.tr)
+                return;
             }
         }
 
         function triggerBypass(reason) {
+            // This function should only be called after captcha is solved (e.g., types.tr) or other legit triggers.
             if (bypassTriggered) {
-                if (debug) console.log('[Debug] trigger Bypass skipped, already triggered');
+                if (debug) console.log('[Debug] triggerBypass skipped (already triggered)');
                 return;
             }
             bypassTriggered = true;
-            if (debug) console.log('[Debug] trigger Bypass via:', reason);
+            if (debug) console.log('[Debug] triggerBypass via:', reason);
             if (panel) panel.showBypassingWorkink();
 
+            // keep spoofing until destination arrives
             let retryCount = 0;
-            function keepSpoofing() {
+            async function keepSpoofing() {
                 if (destinationReceived) {
-                    if (debug) console.log('[Debug] Destination received, stopping spoofing after', retryCount, 'attempts');
+                    if (debug) console.log('[Debug] destination received: stopping spoof loop after', retryCount, 'attempts');
                     return;
                 }
                 retryCount++;
-                if (debug) console.log(`[Debug] Spoofing attempt #${retryCount}`);
-                spoofWorkink();
+                if (debug) console.log('[Debug] keepSpoofing attempt', retryCount);
+                try {
+                    // spoof any present socials (including the last remaining one)
+                    if (linkInfoA && sendMessageA && sessionControllerA) {
+                        const socials = linkInfoA.socials || [];
+                        for (let i = 0; i < socials.length; i++) {
+                            try { sendMessageA.call(sessionControllerA, types.ss, { url: socials[i].url }); } catch (e) {}
+                        }
+                    }
+                    // spoof monetizations etc.
+                    spoofWorkink();
+                } catch (e) {
+                    if (debug) console.error('[Debug] keepSpoofing error', e);
+                }
                 setTimeout(keepSpoofing, 3000);
             }
             keepSpoofing();
-            if (debug) console.log('[Debug] Waiting for server to send destination data...');
         }
 
         function spoofWorkink() {
             if (!linkInfoA) {
-                if (debug) console.log('[Debug] spoof Workink skipped: no sessionControllerA.linkInfo');
+                if (debug) console.log('[Debug] spoofWorkink skipped: no linkInfoA');
                 return;
             }
-            if (debug) console.log('[Debug] spoof Workink starting, linkInfo:', linkInfoA);
+            if (debug) console.log('[Debug] spoofWorkink running, linkInfoA present');
 
             const socials = linkInfoA.socials || [];
-            if (debug) console.log('[Debug] Total socials to fake:', socials.length);
-
             for (let i = 0; i < socials.length; i++) {
                 const soc = socials[i];
                 try {
-                    if (sendMessageA) {
+                    if (sendMessageA && sessionControllerA) {
                         sendMessageA.call(sessionControllerA, types.ss, { url: soc.url });
                         if (debug) console.log(`[Debug] Faked social [${i+1}/${socials.length}]:`, soc.url);
-                    } else {
-                        if (debug) console.warn(`[Debug] No send message for social [${i+1}/${socials.length}]:`, soc.url);
                     }
                 } catch (e) {
-                    if (debug) console.error(`[Debug] Error faking social [${i+1}/${socials.length}]:`, soc.url, e);
+                    if (debug) console.error('[Debug] Error faking social', soc.url, e);
                 }
             }
 
@@ -887,15 +609,12 @@
 
             for (let i = 0; i < monetizations.length; i++) {
                 const monetization = monetizations[i];
-                if (debug) console.log(`[Debug] Processing monetization [${i+1}/${monetizations.length}]:`, monetization);
                 const monetizationId = monetization.id;
                 const monetizationSendMessage = monetization.sendMessage;
-
                 try {
                     switch (monetizationId) {
                         case 22:
                             monetizationSendMessage.call(monetization, { event: 'read' });
-                            if (debug) console.log(`[Debug] Faked readArticles2 [${i+1}/${monetizations.length}]`);
                             break;
                         case 25:
                             monetizationSendMessage.call(monetization, { event: 'start' });
@@ -909,36 +628,30 @@
                                     body: JSON.stringify({ noteligible: true })
                                 }).catch(() => {});
                             }, 5000);
-                            if (debug) console.log(`[Debug] Faked operaGX [${i+1}/${monetizations.length}]`);
                             break;
                         case 34:
                             monetizationSendMessage.call(monetization, { event: 'start' });
                             monetizationSendMessage.call(monetization, { event: 'installedClicked' });
-                            if (debug) console.log(`[Debug] Faked norton [${i+1}/${monetizations.length}]`);
                             break;
                         case 71:
                             monetizationSendMessage.call(monetization, { event: 'start' });
                             monetizationSendMessage.call(monetization, { event: 'installed' });
-                            if (debug) console.log(`[Debug] Faked externalArticles [${i+1}/${monetizations.length}]`);
                             break;
                         case 45:
                             monetizationSendMessage.call(monetization, { event: 'installed' });
-                            if (debug) console.log(`[Debug] Faked pdfeditor [${i+1}/${monetizations.length}]`);
                             break;
                         case 57:
                             monetizationSendMessage.call(monetization, { event: 'installed' });
-                            if (debug) console.log(`[Debug] Faked betterdeals [${i+1}/${monetizations.length}]`);
                             break;
                         default:
-                            if (debug) console.log(`[Debug] Unknown monetization [${i+1}/${monetizations.length}]:`, monetization);
+                            if (debug) console.log('[Debug] Unknown monetization id', monetizationId);
                             break;
                     }
                 } catch (e) {
-                    if (debug) console.error(`[Debug] Error faking monetization [${i+1}/${monetizations.length}]:`, monetization, e);
+                    if (debug) console.error('[Debug] Error faking monetization', monetization, e);
                 }
             }
-
-            if (debug) console.log('[Debug] spoof Workink completed');
+            if (debug) console.log('[Debug] spoofWorkink completed');
         }
 
         function createSendMessageProxy() {
@@ -950,14 +663,22 @@
                     if (debug) console.log('[Debug] Message sent:', pt, pd);
                 }
 
+                // block ad messages
                 if (pt === types.ad) {
                     if (debug) console.log('[Debug] Blocking adblocker message');
                     return;
                 }
 
+                // If Turnstile/captcha response is seen, run bypass (user solved captcha)
                 if (pt === types.tr) {
-                    if (debug) console.log('[Debug] Captcha bypassed via TR');
-                    triggerBypass('tr');
+                    if (debug) console.log('[Debug] Captcha/turnstile response detected -> user solved captcha');
+                    // only trigger bypass when social count <=1 (we're already enforcing social-only refresh earlier).
+                    const socials = linkInfoA?.socials || [];
+                    if (socials.length <= 1) {
+                        triggerBypass('tr');
+                    } else {
+                        if (debug) console.log('[Debug] Captcha solved but socials >1; social loop should handle removing them first.');
+                    }
                 }
 
                 return sendMessageA ? sendMessageA.apply(this, args) : undefined;
@@ -968,8 +689,11 @@
             return function(...args) {
                 const info = args[0];
                 linkInfoA = info;
-                if (debug) console.log('[Debug] Link info:', info);
-                spoofWorkink();
+                if (debug) console.log('[Debug] Link info arrived:', info);
+                // Always check socials when link info arrives
+                try { checkAndHandleSocials(); } catch (e) { if (debug) console.error(e); }
+                // Also spoof once proactively (safe)
+                try { spoofWorkink(); } catch (e) { if (debug) console.error(e); }
                 try {
                     Object.defineProperty(info, 'isAdblockEnabled', {
                         get: () => false,
@@ -992,7 +716,7 @@
 
         function startCountdown(url, waitLeft) {
             if (debug) console.log('[Debug] startCountdown: Started with', waitLeft, 'seconds');
-            if (panel) panel.show('bypassSuccess', 'success'); // show simplified "Bypass successful" when countdown begins
+            if (panel) panel.show('bypassSuccess', 'success');
 
             const interval = setInterval(() => {
                 waitLeft -= 1;
@@ -1019,11 +743,8 @@
                     waitTimeSeconds = 38;
                 }
 
-                // When destination arrives, show simplified "Bypass successful" and reveal slider to allow redirect delay control
                 if (panel) {
-                    // Show the simple message "Bypass successful"
-                    panel.show('bypassSuccess', 'success'); // translation value is "Bypass successful"
-                    // Reveal slider and wire callback to actually redirect
+                    panel.show('bypassSuccess', 'success');
                     panel.showCaptchaComplete && panel.showCaptchaComplete();
                     panel.setCallback && panel.setCallback((delay) => {
                         if (debug) console.log('[Debug] User selected delay:', delay);
@@ -1033,16 +754,13 @@
                             redirect(data.url);
                         } else {
                             panel.startCountdown && panel.startCountdown(delay);
-                            setTimeout(() => {
-                                redirect(data.url);
-                            }, (delay + 1) * 1000);
+                            setTimeout(() => { redirect(data.url); }, (delay + 1) * 1000);
                         }
                     });
                 }
 
-                // If we still need to wait server side before redirecting automatically, preserve that behavior:
                 if (secondsPassed >= waitTimeSeconds) {
-                    // immediate as above (already hooked)
+                    // immediate (already handled)
                 } else {
                     const remainingWait = waitTimeSeconds - secondsPassed;
                     setTimeout(() => {
@@ -1056,9 +774,7 @@
                                     redirect(data.url);
                                 } else {
                                     panel.startCountdown && panel.startCountdown(delay);
-                                    setTimeout(() => {
-                                        redirect(data.url);
-                                    }, (delay + 1) * 1000);
+                                    setTimeout(() => { redirect(data.url); }, (delay + 1) * 1000);
                                 }
                             });
                         }
@@ -1074,6 +790,11 @@
             const info = resolveName(sessionControllerA, map.onLI);
             const dest = resolveName(sessionControllerA, map.onLD);
 
+            if (!send.fn || !info.fn || !dest.fn) {
+                if (debug) console.log('[Debug] Could not resolve send/info/dest on controller yet', send, info, dest);
+                return;
+            }
+
             sendMessageA = send.fn;
             onLinkInfoA = info.fn;
             onLinkDestinationA = dest.fn;
@@ -1082,28 +803,32 @@
             const onLinkInfoProxy = createLinkInfoProxy();
             const onDestinationProxy = createDestinationProxy();
 
-            Object.defineProperty(sessionControllerA, send.name, {
-                get() { return sendMessageProxy },
-                set(v) { sendMessageA = v },
-                configurable: false,
-                enumerable: true
-            });
+            try {
+                Object.defineProperty(sessionControllerA, send.name, {
+                    get() { return sendMessageProxy },
+                    set(v) { sendMessageA = v },
+                    configurable: false,
+                    enumerable: true
+                });
 
-            Object.defineProperty(sessionControllerA, info.name, {
-                get() { return onLinkInfoProxy },
-                set(v) { onLinkInfoA = v },
-                configurable: false,
-                enumerable: true
-            });
+                Object.defineProperty(sessionControllerA, info.name, {
+                    get() { return onLinkInfoProxy },
+                    set(v) { onLinkInfoA = v },
+                    configurable: false,
+                    enumerable: true
+                });
 
-            Object.defineProperty(sessionControllerA, dest.name, {
-                get() { return onDestinationProxy },
-                set(v) { onLinkDestinationA = v },
-                configurable: false,
-                enumerable: true
-            });
+                Object.defineProperty(sessionControllerA, dest.name, {
+                    get() { return onDestinationProxy },
+                    set(v) { onLinkDestinationA = v },
+                    configurable: false,
+                    enumerable: true
+                });
 
-            if (debug) console.log(`[Debug] setupProxies: installed ${send.name}, ${info.name}, ${dest.name}`);
+                if (debug) console.log(`[Debug] setupProxies: installed ${send.name}, ${info.name}, ${dest.name}`);
+            } catch (e) {
+                if (debug) console.warn('[Debug] Failed to define proxy properties', e);
+            }
         }
 
         function checkController(target, prop, value, receiver) {
@@ -1232,53 +957,67 @@
 
         setupInterception();
 
+        // Periodically check socials (in case linkInfoA updates without a full reload)
+        const periodicChecker = setInterval(() => {
+            try {
+                if (linkInfoA && !bypassTriggered) {
+                    checkAndHandleSocials();
+                }
+            } catch (e) {
+                if (debug) console.error('[Debug] periodic check error', e);
+            }
+        }, 2500);
+
         const ob = new MutationObserver(mutations => {
             for (const m of mutations) {
                 for (const node of m.addedNodes) {
                     if (node.nodeType === 1) {
                         blockedClasses.forEach((cls) => {
-                            if (node.classList?.contains(cls)) {
-                                node.remove();
-                                if (debug) console.log('[Debug]: Removed ad by class:', cls, node);
-                            }
-                            node.querySelectorAll?.(`.${cls}`).forEach((el) => {
-                                el.remove();
-                                if (debug) console.log('[Debug]: Removed nested ad by class:', cls, el);
-                            });
+                            try {
+                                if (node.classList?.contains(cls)) {
+                                    node.remove();
+                                    if (debug) console.log('[Debug]: Removed ad by class:', cls, node);
+                                }
+                            } catch (e) {}
+                            try {
+                                node.querySelectorAll?.(`.${cls}`).forEach((el) => {
+                                    el.remove();
+                                    if (debug) console.log('[Debug]: Removed nested ad by class:', cls, el);
+                                });
+                            } catch (e) {}
                         });
 
                         blockedIds.forEach((id) => {
-                            if (node.id === id) {
-                                node.remove();
-                                if (debug) console.log('[Debug]: Removed ad by id:', id, node);
-                            }
-                            node.querySelectorAll?.(`#${id}`).forEach((el) => {
-                                el.remove();
-                                if (debug) console.log('[Debug]: Removed nested ad by id:', id, el);
-                            });
+                            try {
+                                if (node.id === id) {
+                                    node.remove();
+                                    if (debug) console.log('[Debug]: Removed ad by id:', id, node);
+                                }
+                            } catch (e) {}
+                            try {
+                                node.querySelectorAll?.(`#${id}`).forEach((el) => {
+                                    el.remove();
+                                    if (debug) console.log('[Debug]: Removed nested ad by id:', id, el);
+                                });
+                            } catch (e) {}
                         });
 
-                        if (node.matches('.button.large.accessBtn.pos-relative') && node.textContent.includes('Go To Destination')) {
+                        if (node.matches && node.matches('.button.large.accessBtn.pos-relative') && node.textContent.includes('Go To Destination')) {
                             if (debug) console.log('[Debug] GTD button detected');
 
                             if (!bypassTriggered && !socialCheckInProgress) {
                                 if (debug) console.log('[Debug] GTD: Checking socials...');
-
-                                let gtdRetryCount = 0;
 
                                 function checkAndTriggerGTD() {
                                     const ctrl = sessionControllerA;
                                     const dest = resolveName(ctrl, map.onLD);
 
                                     if (ctrl && linkInfoA && dest.fn) {
-                                        // Check socials before triggering bypass
-                                        if (panel) panel.show('captchaSuccess', 'success');
+                                        // Start socials-first check (do NOT show captcha here if socials>1)
                                         checkAndHandleSocials();
-                                        if (debug) console.log('[Debug] GTD: Social check initiated after', gtdRetryCount, 'seconds');
+                                        if (debug) console.log('[Debug] GTD: Social check initiated');
                                     } else {
-                                        gtdRetryCount++;
-                                        if (debug) console.log(`[Debug] GTD retry ${gtdRetryCount}s: Still waiting for linkInfo...`);
-                                        if (panel) panel.show('pleaseReload', 'info');
+                                        if (panel) panel.show('pleasereload', 'info');
                                         setTimeout(checkAndTriggerGTD, 1000);
                                     }
                                 }
