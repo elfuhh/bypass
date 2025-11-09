@@ -20,7 +20,7 @@
             bypassSuccess: "Bypass thành công",
             backToCheckpoint: "Đang về lại Checkpoint...",
             captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-            version: "Phiên bản v1.8.0.0",
+            version: "Phiên bản v1.9.0.0",
             madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
             autoRedirect: "Tự động chuyển hướng"
         },
@@ -33,11 +33,11 @@
             waitingCaptcha: "Waiting for CAPTCHA...",
             pleaseReload: "Please reload the page...(workink bugs)",
             reloading: "done spoofing reloading...",
-            socialsdetected:"socials detected beginning to spoof...",
+            socialsdetected: "socials detected beginning to spoof...",
             bypassSuccess: "Bypass successful",
             backToCheckpoint: "Returning to checkpoint...",
             captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-            version: "Version v1.8.0.0",
+            version: "Version v1.9.0.0",
             madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
             autoRedirect: "Auto-redirect"
         }
@@ -60,6 +60,7 @@
     // selectedDelay: global variable used by GUI and callback
     let selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
     let autoRedirectEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
+    let redirectInProgress = false; // Global redirect flag
 
     // ---------- GUI: BypassPanel ----------
     class BypassPanel {
@@ -86,6 +87,7 @@
             this.startBtn = null;
             this.autoToggle = null;
             this.onStartCallback = null;
+            this.redirectInProgress = false; // Instance redirect flag
 
             this.init();
         }
@@ -102,7 +104,9 @@
         createPanel() {
             this.container = document.createElement('div');
             // use closed shadow root so page scripts can't easily tamper with UI elements
-            this.shadow = this.container.attachShadow({ mode: 'closed' });
+            this.shadow = this.container.attachShadow({
+                mode: 'closed'
+            });
 
             const style = document.createElement('style');
             style.textContent = `
@@ -725,11 +729,20 @@ input:checked + .toggle-slider:before {
 
             // start button triggers the callback with current selectedDelay
             this.startBtn.addEventListener('click', () => {
+                if (this.redirectInProgress) {
+                    if (debug) console.log('[Debug] Start button: redirect already in progress');
+                    return;
+                }
+
                 if (this.onStartCallback) {
+                    this.redirectInProgress = true;
+                    redirectInProgress = true;
                     try {
                         this.onStartCallback(selectedDelay);
                     } catch (err) {
                         if (debug) console.error('[Debug] onStartCallback error', err);
+                        this.redirectInProgress = false;
+                        redirectInProgress = false;
                     }
                 }
             });
@@ -758,36 +771,50 @@ input:checked + .toggle-slider:before {
 
         show(messageKeyOrTitle, typeOrSubtitle = 'info', replacements = {}) {
             this.currentMessageKey = messageKeyOrTitle;
-            this.currentType = (typeof typeOrSubtitle === 'string' && ['info','success','warning','error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
+            this.currentType = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
             this.currentReplacements = replacements;
             let message = '';
             if (translations[currentLanguage] && translations[currentLanguage][messageKeyOrTitle]) {
                 message = t(messageKeyOrTitle, replacements);
-                if (typeof typeOrSubtitle === 'string' && !['info','success','warning','error'].includes(typeOrSubtitle) && typeOrSubtitle.length > 0) {
+                if (typeof typeOrSubtitle === 'string' && !['info', 'success', 'warning', 'error'].includes(typeOrSubtitle) && typeOrSubtitle.length > 0) {
                     message = typeOrSubtitle;
                 }
             } else {
-                message = (typeof typeOrSubtitle === 'string' && ['info','success','warning','error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
+                message = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
             }
             this.statusText.textContent = message;
             this.statusDot.className = `status-dot ${this.currentType}`;
         }
 
-        showBypassingWorkink() { this.show('captchaSuccessBypassing', 'success'); }
+        showBypassingWorkink() {
+            this.show('captchaSuccessBypassing', 'success');
+        }
 
         // Called when a destination is ready and we want to show the slider / allow the user to start redirect
         showCaptchaComplete() {
+            // Prevent multiple calls
+            if (this.redirectInProgress || redirectInProgress) {
+                if (debug) console.log('[Debug] showCaptchaComplete: redirect already in progress, ignoring');
+                return;
+            }
+
             this.sliderContainer.classList.add('active');
-            this.sliderContainer.style.display = '';
+            this.sliderContainer.style.display = 'block';
             this.show('bypassSuccess', 'success');
             this.sliderValue.textContent = `${selectedDelay}s`;
             try {
                 this.slider.value = String(selectedDelay);
             } catch (e) {}
 
+            if (debug) console.log('[Debug] Slider container shown, autoRedirectEnabled:', autoRedirectEnabled);
+
             // If auto-redirect is enabled, automatically trigger the callback after showing UI
             if (autoRedirectEnabled) {
                 if (debug) console.log('[Debug] Auto-redirect is enabled, starting auto countdown with delay:', selectedDelay);
+
+                // Mark redirect as in progress BEFORE calling callback
+                this.redirectInProgress = true;
+                redirectInProgress = true;
 
                 // Use a longer delay to ensure UI is fully rendered
                 setTimeout(() => {
@@ -797,9 +824,13 @@ input:checked + .toggle-slider:before {
                             this.onStartCallback(selectedDelay);
                         } catch (err) {
                             if (debug) console.error('[Debug] Auto-redirect callback error', err);
+                            this.redirectInProgress = false;
+                            redirectInProgress = false;
                         }
                     } else {
                         if (debug) console.warn('[Debug] onStartCallback is not set!');
+                        this.redirectInProgress = false;
+                        redirectInProgress = false;
                     }
                 }, 500);
             } else {
@@ -876,11 +907,10 @@ input:checked + .toggle-slider:before {
 
         function actOnCheckpoint(node) {
             if (!alreadyDoneContinue) {
-                const buttons = node && node.nodeType === 1
-                    ? node.matches('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]')
-                        ? [node]
-                        : node.querySelectorAll('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]')
-                    : document.querySelectorAll('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]');
+                const buttons = node && node.nodeType === 1 ?
+                    node.matches('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]') ? [node] :
+                    node.querySelectorAll('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]') :
+                    document.querySelectorAll('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]');
                 for (const btn of buttons) {
                     const text = (btn.innerText || btn.value || "").trim().toLowerCase();
                     if (text.includes("continue") || text.includes("next step")) {
@@ -907,11 +937,11 @@ input:checked + .toggle-slider:before {
                 }
             }
 
-            const copyBtn = node && node.nodeType === 1
-                ? node.matches("#copy-key-btn, .copy-btn, [aria-label='Copy']")
-                    ? node
-                    : node.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']")
-                : document.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']");
+            const copyBtn = node && node.nodeType === 1 ?
+                node.matches("#copy-key-btn, .copy-btn, [aria-label='Copy']") ?
+                node :
+                node.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']") :
+                document.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']");
             if (copyBtn) {
                 setInterval(() => {
                     try {
@@ -953,7 +983,12 @@ input:checked + .toggle-slider:before {
             }
         });
 
-        mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'aria-disabled', 'style'] });
+        mo.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['disabled', 'aria-disabled', 'style']
+        });
 
         if (actOnCheckpoint()) {
             if (alreadyDoneCopy) {
@@ -983,27 +1018,50 @@ input:checked + .toggle-slider:before {
 
         function resolveName(obj, candidates) {
             if (!obj || typeof obj !== "object") {
-                return { fn: null, index: -1, name: null };
+                return {
+                    fn: null,
+                    index: -1,
+                    name: null
+                };
             }
             for (let i = 0; i < candidates.length; i++) {
                 const name = candidates[i];
                 if (typeof obj[name] === "function") {
-                    return { fn: obj[name], index: i, name };
+                    return {
+                        fn: obj[name],
+                        index: i,
+                        name
+                    };
                 }
             }
-            return { fn: null, index: -1, name: null };
+            return {
+                fn: null,
+                index: -1,
+                name: null
+            };
         }
 
         function resolveWriteFunction(obj) {
             if (!obj || typeof obj !== "object") {
-                return { fn: null, index: -1, name: null };
+                return {
+                    fn: null,
+                    index: -1,
+                    name: null
+                };
             }
             for (let i in obj) {
                 if (typeof obj[i] === "function" && obj[i].length === 2) {
-                    return { fn: obj[i], name: i };
+                    return {
+                        fn: obj[i],
+                        name: i
+                    };
                 }
             }
-            return { fn: null, index: -1, name: null };
+            return {
+                fn: null,
+                index: -1,
+                name: null
+            };
         }
 
         const types = {
@@ -1038,7 +1096,9 @@ input:checked + .toggle-slider:before {
                     const soc = socials[i];
                     try {
                         if (sendMessageA && sessionControllerA) {
-                            sendMessageA.call(sessionControllerA, types.ss, { url: soc.url });
+                            sendMessageA.call(sessionControllerA, types.ss, {
+                                url: soc.url
+                            });
                             if (debug) console.log(`[Debug] Spoofed social [${i+1}/${socials.length}]:`, soc.url);
                             if (panel) panel.show('Processing Socials', `Spoofed ${i+1}/${socials.length} socials...`);
                         } else {
@@ -1053,7 +1113,9 @@ input:checked + .toggle-slider:before {
                 if (debug) console.log('[Debug] Completed social spoofing. Waiting 3000ms before reload...');
                 await sleep(2000);
 
-                try { sessionStorage.setItem('dyrian_last_spoof', Date.now().toString()); } catch (e) {}
+                try {
+                    sessionStorage.setItem('dyrian_last_spoof', Date.now().toString());
+                } catch (e) {}
                 if (panel) panel.show('reloading', 'info');
                 window.location.reload();
                 return;
@@ -1086,7 +1148,11 @@ input:checked + .toggle-slider:before {
                     if (linkInfoA && sendMessageA && sessionControllerA) {
                         const socials = linkInfoA.socials || [];
                         for (let i = 0; i < socials.length; i++) {
-                            try { sendMessageA.call(sessionControllerA, types.ss, { url: socials[i].url }); } catch (e) {}
+                            try {
+                                sendMessageA.call(sessionControllerA, types.ss, {
+                                    url: socials[i].url
+                                });
+                            } catch (e) {}
                         }
                     }
                     spoofWorkink();
@@ -1110,7 +1176,9 @@ input:checked + .toggle-slider:before {
                 const soc = socials[i];
                 try {
                     if (sendMessageA && sessionControllerA) {
-                        sendMessageA.call(sessionControllerA, types.ss, { url: soc.url });
+                        sendMessageA.call(sessionControllerA, types.ss, {
+                            url: soc.url
+                        });
                         if (debug) console.log(`[Debug] Faked social [${i+1}/${socials.length}]:`, soc.url);
                     }
                 } catch (e) {
@@ -1128,34 +1196,59 @@ input:checked + .toggle-slider:before {
                 try {
                     switch (monetizationId) {
                         case 22:
-                            monetizationSendMessage.call(monetization, { event: 'read' });
+                            monetizationSendMessage.call(monetization, {
+                                event: 'read'
+                            });
                             break;
                         case 25:
-                            monetizationSendMessage.call(monetization, { event: 'start' });
-                            monetizationSendMessage.call(monetization, { event: 'installClicked' });
-                            fetch('/_api/v2/affiliate/operaGX', { method: 'GET', mode: 'no-cors' }).catch(() => {});
+                            monetizationSendMessage.call(monetization, {
+                                event: 'start'
+                            });
+                            monetizationSendMessage.call(monetization, {
+                                event: 'installClicked'
+                            });
+                            fetch('/_api/v2/affiliate/operaGX', {
+                                method: 'GET',
+                                mode: 'no-cors'
+                            }).catch(() => {});
                             setTimeout(() => {
                                 fetch('https://work.ink/_api/v2/callback/operaGX', {
                                     method: 'POST',
                                     mode: 'no-cors',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ noteligible: true })
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        noteligible: true
+                                    })
                                 }).catch(() => {});
                             }, 5000);
                             break;
                         case 34:
-                            monetizationSendMessage.call(monetization, { event: 'start' });
-                            monetizationSendMessage.call(monetization, { event: 'installClicked' });
+                            monetizationSendMessage.call(monetization, {
+                                event: 'start'
+                            });
+                            monetizationSendMessage.call(monetization, {
+                                event: 'installClicked'
+                            });
                             break;
                         case 71:
-                            monetizationSendMessage.call(monetization, { event: 'start' });
-                            monetizationSendMessage.call(monetization, { event: 'installed' });
+                            monetizationSendMessage.call(monetization, {
+                                event: 'start'
+                            });
+                            monetizationSendMessage.call(monetization, {
+                                event: 'installed'
+                            });
                             break;
                         case 45:
-                            monetizationSendMessage.call(monetization, { event: 'installed' });
+                            monetizationSendMessage.call(monetization, {
+                                event: 'installed'
+                            });
                             break;
                         case 57:
-                            monetizationSendMessage.call(monetization, { event: 'installed' });
+                            monetizationSendMessage.call(monetization, {
+                                event: 'installed'
+                            });
                             break;
                         default:
                             if (debug) console.log('[Debug] Unknown monetization id', monetizationId);
@@ -1201,8 +1294,16 @@ input:checked + .toggle-slider:before {
                 const info = args[0];
                 linkInfoA = info;
                 if (debug) console.log('[Debug] Link info arrived:', info);
-                try { checkAndHandleSocials(); } catch (e) { if (debug) console.error(e); }
-                try { spoofWorkink(); } catch (e) { if (debug) console.error(e); }
+                try {
+                    checkAndHandleSocials();
+                } catch (e) {
+                    if (debug) console.error(e);
+                }
+                try {
+                    spoofWorkink();
+                } catch (e) {
+                    if (debug) console.error(e);
+                }
                 try {
                     Object.defineProperty(info, 'isAdblockEnabled', {
                         get: () => false,
@@ -1214,7 +1315,7 @@ input:checked + .toggle-slider:before {
                 } catch (e) {
                     if (debug) console.warn('[Debug] Define Property failed:', e);
                 }
-                return onLinkInfoA ? onLinkInfoA.apply(this, args): undefined;
+                return onLinkInfoA ? onLinkInfoA.apply(this, args) : undefined;
             };
         }
 
@@ -1225,21 +1326,28 @@ input:checked + .toggle-slider:before {
 
         function createDestinationProxy() {
             return function(...args) {
+                // Add this check at the start
+                if (redirectInProgress || destinationReceived) {
+                    if (debug) console.log('[Debug] createDestinationProxy: redirect already in progress or destination already received, ignoring');
+                    return onLinkDestinationA ? onLinkDestinationA.apply(this, args) : undefined;
+                }
+
                 const data = args[0];
                 const secondsPassed = (Date.now() - startTime) / 1000;
                 destinationReceived = true;
+
                 if (debug) console.log('[Debug] Destination data:', data.url);
 
                 let waitTimeSeconds = 5;
                 const url = location.href;
-                if (url.includes('42rk6hcq') || url.includes('ito4wckq') || url.includes('pzarvhq1')) {
-                }
+                if (url.includes('42rk6hcq') || url.includes('ito4wckq') || url.includes('pzarvhq1')) {}
 
                 if (panel) {
                     panel.show('bypassSuccess', 'success');
-                    panel.showCaptchaComplete && panel.showCaptchaComplete();
+
+                    // Set callback FIRST before calling showCaptchaComplete
                     panel.setCallback && panel.setCallback((delay) => {
-                        if (debug) console.log('[Debug] User selected delay:', delay);
+                        if (debug) console.log('[Debug] Callback triggered with delay:', delay);
                         if (delay === 0) {
                             if (debug) console.log('[Debug] Delay is 0, redirecting immediately');
                             panel.show('redirectingToWork', 'info');
@@ -1253,30 +1361,13 @@ input:checked + .toggle-slider:before {
                             }, (delay + 1) * 1000);
                         }
                     });
+
+                    // Call showCaptchaComplete AFTER setting callback
+                    if (debug) console.log('[Debug] Calling showCaptchaComplete');
+                    panel.showCaptchaComplete && panel.showCaptchaComplete();
                 }
 
-                if (secondsPassed >= waitTimeSeconds) {
-                } else {
-                    const remainingWait = waitTimeSeconds - secondsPassed;
-                    setTimeout(() => {
-                        if (panel) {
-                            panel.show('bypassSuccess', 'success');
-                            panel.showCaptchaComplete && panel.showCaptchaComplete();
-                            panel.setCallback && panel.setCallback((delay) => {
-                                if (debug) console.log('[Debug] User selected delay:', delay);
-                                if (delay === 0) {
-                                    panel.show('redirectingToWork', 'info');
-                                    redirect(data.url);
-                                } else {
-                                    panel.startCountdown && panel.startCountdown(delay);
-                                    setTimeout(() => { redirect(data.url); }, (delay + 1) * 1000);
-                                }
-                            });
-                        }
-                    }, remainingWait * 1000);
-                }
-
-                return onLinkDestinationA ? onLinkDestinationA.apply(this, args): undefined;
+                return onLinkDestinationA ? onLinkDestinationA.apply(this, args) : undefined;
             };
         }
 
@@ -1300,22 +1391,34 @@ input:checked + .toggle-slider:before {
 
             try {
                 Object.defineProperty(sessionControllerA, send.name, {
-                    get() { return sendMessageProxy },
-                    set(v) { sendMessageA = v },
+                    get() {
+                        return sendMessageProxy
+                    },
+                    set(v) {
+                        sendMessageA = v
+                    },
                     configurable: false,
                     enumerable: true
                 });
 
                 Object.defineProperty(sessionControllerA, info.name, {
-                    get() { return onLinkInfoProxy },
-                    set(v) { onLinkInfoA = v },
+                    get() {
+                        return onLinkInfoProxy
+                    },
+                    set(v) {
+                        onLinkInfoA = v
+                    },
                     configurable: false,
                     enumerable: true
                 });
 
                 Object.defineProperty(sessionControllerA, dest.name, {
-                    get() { return onDestinationProxy },
-                    set(v) { onLinkDestinationA = v },
+                    get() {
+                        return onDestinationProxy
+                    },
+                    set(v) {
+                        onLinkDestinationA = v
+                    },
                     configurable: false,
                     enumerable: true
                 });
@@ -1348,7 +1451,9 @@ input:checked + .toggle-slider:before {
                 construct(target, args) {
                     const instance = Reflect.construct(target, args);
                     if (instance.$$.ctx) {
-                        instance.$$.ctx = new Proxy(instance.$$.ctx, { set: checkController });
+                        instance.$$.ctx = new Proxy(instance.$$.ctx, {
+                            set: checkController
+                        });
                     }
                     return instance;
                 }
@@ -1433,7 +1538,28 @@ input:checked + .toggle-slider:before {
             };
         }
 
-        window.googletag = {cmd: [], _loaded_: true};
+
+        // Early controller detection with interval check
+        let controllerCheckInterval = setInterval(() => {
+            if (sessionControllerA) {
+                if (debug) console.log('[Debug] Controller detected early, stopping interval check');
+                clearInterval(controllerCheckInterval);
+            }
+        }, 500);
+
+        // Stop checking after 30 seconds
+        setTimeout(() => {
+            if (controllerCheckInterval) {
+                clearInterval(controllerCheckInterval);
+                if (debug) console.log('[Debug] Controller check interval stopped after timeout');
+            }
+        }, 30000);
+
+
+        window.googletag = {
+            cmd: [],
+            _loaded_: true
+        };
 
         const blockedClasses = [
             "adsbygoogle",
@@ -1510,11 +1636,19 @@ input:checked + .toggle-slider:before {
                                         checkAndHandleSocials();
                                         if (debug) console.log('[Debug] GTD: Social check initiated');
                                     } else {
-                                        if (panel) panel.show('pleasereload', 'info');
-                                        setTimeout(checkAndTriggerGTD, 1000);
+                                        // Try to re-setup proxies if controller exists but proxies aren't ready
+                                        if (sessionControllerA) {
+                                            if (debug) console.log('[Debug] GTD: Controller exists, re-attempting proxy setup');
+                                            setupProxies();
+                                            setTimeout(checkAndTriggerGTD, 500);
+                                        } else {
+                                            if (debug) console.log('[Debug] GTD: No controller yet, waiting...');
+                                            // Show waiting message instead of reload
+                                            if (panel) panel.show('waitingCaptcha', 'info');
+                                            setTimeout(checkAndTriggerGTD, 1000);
+                                        }
                                     }
                                 }
-
                                 checkAndTriggerGTD();
 
                             } else {
@@ -1525,7 +1659,10 @@ input:checked + .toggle-slider:before {
                 }
             }
         });
-        ob.observe(document.documentElement, { childList: true, subtree: true });
+        ob.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+        });
     }
 
-})()
+})();
