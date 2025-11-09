@@ -618,7 +618,7 @@
                             break;
                         case 25:
                             monetizationSendMessage.call(monetization, { event: 'start' });
-                            monetizationSendMessage.call(monetization, { event: 'installedClicked' });
+                            monetizationSendMessage.call(monetization, { event: 'installClicked' });
                             fetch('/_api/v2/affiliate/operaGX', { method: 'GET', mode: 'no-cors' }).catch(() => {});
                             setTimeout(() => {
                                 fetch('https://work.ink/_api/v2/callback/operaGX', {
@@ -631,7 +631,7 @@
                             break;
                         case 34:
                             monetizationSendMessage.call(monetization, { event: 'start' });
-                            monetizationSendMessage.call(monetization, { event: 'installedClicked' });
+                            monetizationSendMessage.call(monetization, { event: 'installClicked' });
                             break;
                         case 71:
                             monetizationSendMessage.call(monetization, { event: 'start' });
@@ -740,7 +740,6 @@
                 let waitTimeSeconds = 5;
                 const url = location.href;
                 if (url.includes('42rk6hcq') || url.includes('ito4wckq') || url.includes('pzarvhq1')) {
-                    waitTimeSeconds = 38;
                 }
 
                 if (panel) {
