@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.8.0.0
 // @description  bypass Workinks and volcano's key system easily
-// @author       merged
+// @author       elfuhh and dyrian
 // @match        https://key.volcano.wtf/*
 // @match        https://work.ink/*
 // @run-at       document-start
