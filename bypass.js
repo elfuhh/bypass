@@ -20,7 +20,7 @@
             bypassSuccess: "Bypass thành công",
             backToCheckpoint: "Đang về lại Checkpoint...",
             captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-            version: "Phiên bản v1.9.0.0",
+            version: "Phiên bản v1.9.1.3",
             madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
             autoRedirect: "Tự động chuyển hướng"
         },
@@ -37,7 +37,7 @@
             bypassSuccess: "Bypass successful",
             backToCheckpoint: "Returning to checkpoint...",
             captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-            version: "Version v1.9.0.0",
+            version: "Version v1.9.1.3",
             madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
             autoRedirect: "Auto-redirect"
         }
@@ -997,7 +997,7 @@ input:checked + .toggle-slider:before {
         }
     }
 
-    // --- WORK.INK (modified social-first persistent check + wait-for-user-captcha) ---
+    // --- WORK.INK (modified to detect GTD button clickability) ---
     function handleWorkInk() {
         if (panel) panel.show('pleaseSolveCaptcha', 'info');
 
@@ -1010,6 +1010,7 @@ input:checked + .toggle-slider:before {
         let bypassTriggered = false;
         let destinationReceived = false;
         let socialCheckInProgress = false;
+        let captchaSolved = false;
 
         const map = {
             onLI: ["onLinkInfo"],
@@ -1074,6 +1075,59 @@ input:checked + .toggle-slider:before {
 
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+        // Function to check if GTD button is clickable
+        function isGTDButtonClickable() {
+            const gtdButton = document.querySelector('.button.large.accessBtn.pos-relative');
+            if (!gtdButton) return false;
+
+            const buttonText = gtdButton.textContent.trim();
+            if (!buttonText.includes('Go To Destination')) return false;
+
+            // Check if button is disabled
+            const disabled = gtdButton.disabled ||
+                           gtdButton.getAttribute('disabled') === 'true' ||
+                           gtdButton.getAttribute('aria-disabled') === 'true';
+
+            // Check if button is visible
+            const style = getComputedStyle(gtdButton);
+            const visible = style.display !== 'none' &&
+                          style.visibility !== 'hidden' &&
+                          gtdButton.offsetParent !== null;
+
+            // Check if button has pointer-events enabled
+            const clickable = style.pointerEvents !== 'none';
+
+            const isClickable = !disabled && visible && clickable;
+
+            if (debug && isClickable) {
+                console.log('[Debug] GTD button is clickable!');
+            }
+
+            return isClickable;
+        }
+
+        // Interval to continuously check GTD button
+        const gtdCheckInterval = setInterval(() => {
+            if (captchaSolved || bypassTriggered) {
+                if (debug) console.log('[Debug] Captcha already processed, stopping GTD check');
+                clearInterval(gtdCheckInterval);
+                return;
+            }
+
+            if (isGTDButtonClickable()) {
+                if (debug) console.log('[Debug] GTD button detected as clickable - captcha solved!');
+                captchaSolved = true;
+                clearInterval(gtdCheckInterval);
+
+                if (panel) panel.show('captchaSuccess', 'success');
+
+                // Trigger bypass after detecting clickable button
+                setTimeout(() => {
+                    triggerBypass('gtd-button-clickable');
+                }, 500);
+            }
+        }, 500); // Check every 500ms
+
         async function checkAndHandleSocials() {
             if (!linkInfoA) {
                 if (debug) console.log('[Debug] checkAndHandleSocials: no linkInfoA yet');
@@ -1110,7 +1164,7 @@ input:checked + .toggle-slider:before {
                     if (i < socials.length - 1) await sleep(1000);
                 }
 
-                if (debug) console.log('[Debug] Completed social spoofing. Waiting 3000ms before reload...');
+                if (debug) console.log('[Debug] Completed social spoofing. Waiting 2000ms before reload...');
                 await sleep(2000);
 
                 try {
@@ -1277,6 +1331,7 @@ input:checked + .toggle-slider:before {
 
                 if (pt === types.tr) {
                     if (debug) console.log('[Debug] Captcha/turnstile response detected -> user solved captcha');
+                    captchaSolved = true;
                     const socials = linkInfoA?.socials || [];
                     if (socials.length <= 1) {
                         triggerBypass('tr');
@@ -1326,7 +1381,6 @@ input:checked + .toggle-slider:before {
 
         function createDestinationProxy() {
             return function(...args) {
-                // Add this check at the start
                 if (redirectInProgress || destinationReceived) {
                     if (debug) console.log('[Debug] createDestinationProxy: redirect already in progress or destination already received, ignoring');
                     return onLinkDestinationA ? onLinkDestinationA.apply(this, args) : undefined;
@@ -1338,14 +1392,9 @@ input:checked + .toggle-slider:before {
 
                 if (debug) console.log('[Debug] Destination data:', data.url);
 
-                let waitTimeSeconds = 5;
-                const url = location.href;
-                if (url.includes('42rk6hcq') || url.includes('ito4wckq') || url.includes('pzarvhq1')) {}
-
                 if (panel) {
                     panel.show('bypassSuccess', 'success');
 
-                    // Set callback FIRST before calling showCaptchaComplete
                     panel.setCallback && panel.setCallback((delay) => {
                         if (debug) console.log('[Debug] Callback triggered with delay:', delay);
                         if (delay === 0) {
@@ -1362,7 +1411,6 @@ input:checked + .toggle-slider:before {
                         }
                     });
 
-                    // Call showCaptchaComplete AFTER setting callback
                     if (debug) console.log('[Debug] Calling showCaptchaComplete');
                     panel.showCaptchaComplete && panel.showCaptchaComplete();
                 }
@@ -1538,8 +1586,6 @@ input:checked + .toggle-slider:before {
             };
         }
 
-
-        // Early controller detection with interval check
         let controllerCheckInterval = setInterval(() => {
             if (sessionControllerA) {
                 if (debug) console.log('[Debug] Controller detected early, stopping interval check');
@@ -1547,14 +1593,12 @@ input:checked + .toggle-slider:before {
             }
         }, 500);
 
-        // Stop checking after 30 seconds
         setTimeout(() => {
             if (controllerCheckInterval) {
                 clearInterval(controllerCheckInterval);
                 if (debug) console.log('[Debug] Controller check interval stopped after timeout');
             }
         }, 30000);
-
 
         window.googletag = {
             cmd: [],
@@ -1623,37 +1667,7 @@ input:checked + .toggle-slider:before {
                         });
 
                         if (node.matches && node.matches('.button.large.accessBtn.pos-relative') && node.textContent.includes('Go To Destination')) {
-                            if (debug) console.log('[Debug] GTD button detected');
-
-                            if (!bypassTriggered && !socialCheckInProgress) {
-                                if (debug) console.log('[Debug] GTD: Checking socials...');
-
-                                function checkAndTriggerGTD() {
-                                    const ctrl = sessionControllerA;
-                                    const dest = resolveName(ctrl, map.onLD);
-
-                                    if (ctrl && dest.fn) {
-                                        checkAndHandleSocials();
-                                        if (debug) console.log('[Debug] GTD: Social check initiated');
-                                    } else {
-                                        // Try to re-setup proxies if controller exists but proxies aren't ready
-                                        if (sessionControllerA) {
-                                            if (debug) console.log('[Debug] GTD: Controller exists, re-attempting proxy setup');
-                                            setupProxies();
-                                            setTimeout(checkAndTriggerGTD, 500);
-                                        } else {
-                                            if (debug) console.log('[Debug] GTD: No controller yet, waiting...');
-                                            // Show waiting message instead of reload
-                                            if (panel) panel.show('waitingCaptcha', 'info');
-                                            setTimeout(checkAndTriggerGTD, 1000);
-                                        }
-                                    }
-                                }
-                                checkAndTriggerGTD();
-
-                            } else {
-                                if (debug) console.log('[Debug] GTD ignored: bypass already triggered or social check in progress');
-                            }
+                            if (debug) console.log('[Debug] GTD button detected in DOM');
                         }
                     }
                 }
