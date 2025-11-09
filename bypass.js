@@ -4,7 +4,7 @@
     const host = location.hostname;
     const debug = true;
 
-    // ---------- translations used by the imported GUI ----------
+    // ---------- translations used by the GUI ----------
     let currentLanguage = localStorage.getItem('lang') || 'vi';
     const translations = {
         vi: {
@@ -40,6 +40,7 @@
             madeBy: "Made by DyRian and elfuhh (based on IHaxU)"
         }
     };
+
     function t(key, replacements = {}) {
         const map = translations[currentLanguage] && translations[currentLanguage][key] ? translations[currentLanguage][key] : key;
         let text = map;
@@ -49,7 +50,14 @@
         return text;
     }
 
-    // ---------- GUI: BypassPanel (imported from 1st code) ----------
+    // ---------- persistent setting keys ----------
+    const STORAGE_KEY_DELAY = 'dyrian_redirect_delay';
+    const STORAGE_KEY_LANG = 'lang';
+
+    // selectedDelay: global variable used by GUI and callback
+    let selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
+
+    // ---------- GUI: BypassPanel ----------
     class BypassPanel {
         constructor() {
             this.container = null;
@@ -88,133 +96,108 @@
 
         createPanel() {
             this.container = document.createElement('div');
+            // use closed shadow root so page scripts can't easily tamper with UI elements
             this.shadow = this.container.attachShadow({ mode: 'closed' });
 
             const style = document.createElement('style');
             style.textContent = `
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-
-                .panel-container {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    width: 400px;
-                    z-index: 2147483647;
-                    font-family: 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif;
-                }
-
-                .panel {
-                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                    border-radius: 16px;
-                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-                    overflow: hidden;
-                    animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                    transition: all 0.3s ease;
-                }
-
-                @keyframes slideIn {
-                    from { opacity: 0; transform: translateX(100px) scale(0.9); }
-                    to { opacity: 1; transform: translateX(0) scale(1); }
-                }
-
-                .header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    padding: 16px 20px;
-                    position: relative;
-                    overflow: hidden;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-
-                .title { font-size: 20px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index:1; }
-                .minimize-btn { background: rgba(255,255,255,0.15); border:none; color:#fff; width:32px; height:32px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:20px; font-weight:700; z-index:1; }
-
-                .status-section { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; }
-                .status-box { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
-                .status-content { display:flex; align-items:center; gap:12px; position:relative; z-index:1; }
-                .status-dot { width:14px; height:14px; border-radius:50%; animation: pulse 2s ease-in-out infinite; box-shadow: 0 0 12px currentColor; flex-shrink:0; }
-                @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.7;transform:scale(1.15);} }
-                .status-dot.info { background: #60a5fa; } .status-dot.success { background:#4ade80; } .status-dot.warning { background:#facc15; } .status-dot.error { background:#f87171; }
-                .status-text { color:#fff; font-size:14px; font-weight:500; flex:1; line-height:1.5; }
-
-                .panel-body { max-height:500px; overflow:hidden; transition:all 0.3s ease; opacity:1; }
-                .panel-body.hidden { max-height:0; opacity:0; }
-
-                .language-section { padding:16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-                .lang-toggle { display:flex; gap:10px; }
-                .lang-btn { flex:1; background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:1px; }
-
-                .info-section { padding:16px 20px; background: rgba(0,0,0,0.2); }
-                .version, .credit { color: rgba(255,255,255,0.6); font-size:12px; font-weight:500; text-align:center; margin-bottom:8px; }
-
-                .links { display:flex; justify-content:center; gap:16px; font-size:11px; }
-                .links a { color: #667eea; text-decoration:none; transition:all 0.2s; }
-
-                .slider-container { display:none; padding:12px 0 0 0; animation: fadeIn 0.4s ease; margin-top:12px; }
-                .slider-container.active { display:block; }
-                .slider-header { display:flex; justify-content:space-between; align-items:center; margin:0 20px 8px 20px; }
-                .slider-label { color: rgba(255,255,255,0.9); font-size:13px; font-weight:600; }
-                .slider-value { color:#fff; font-size:13px; font-weight:700; }
-                .slider-track { margin:0 20px 12px 20px; }
-                .slider { width:100%; height:8px; border-radius:6px; background: linear-gradient(90deg,#2b3440 0%, #27323f 100%); outline:none; -webkit-appearance:none; cursor:pointer; transition:all .25s; }
-                .slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background: linear-gradient(135deg,#667eea 0%, #764ba2 100%); box-shadow:0 6px 14px rgba(102,126,234,0.28); border:2px solid rgba(255,255,255,0.08); }
-                .start-btn { width: calc(100% - 40px); margin:0 20px 16px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; }
-                @keyframes fadeIn { from {opacity:0} to {opacity:1} }
-                @media (max-width:480px) { .panel-container { top:10px; right:10px; left:10px; width:auto; } }
+* { margin:0; padding:0; box-sizing:border-box; }
+.panel-container { position:fixed; top:20px; right:20px; width:400px; z-index:2147483647; font-family:'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif; }
+.panel { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); transition: all 0.3s ease; }
+@keyframes slideIn { from { opacity:0; transform:translateX(100px) scale(0.9); } to { opacity:1; transform:translateX(0) scale(1); } }
+.header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px 20px; position:relative; overflow:hidden; display:flex; justify-content:space-between; align-items:center; }
+.title { font-size:20px; font-weight:700; color:#fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index:1; }
+.minimize-btn { background: rgba(255,255,255,0.15); border:none; color:#fff; width:32px; height:32px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:20px; font-weight:700; z-index:1; }
+.status-section { padding:20px; border-bottom: 1px solid rgba(255,255,255,0.05); position:relative; }
+.status-box { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
+.status-content { display:flex; align-items:center; gap:12px; position:relative; z-index:1; }
+.status-dot { width:14px; height:14px; border-radius:50%; animation: pulse 2s ease-in-out infinite; box-shadow: 0 0 12px currentColor; flex-shrink:0; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.7;transform:scale(1.15);} }
+.status-dot.info { background: #60a5fa; }
+.status-dot.success { background:#4ade80; }
+.status-dot.warning { background:#facc15; }
+.status-dot.error { background:#f87171; }
+.status-text { color:#fff; font-size:14px; font-weight:500; flex:1; line-height:1.5; }
+.panel-body { max-height:500px; overflow:hidden; transition:all 0.3s ease; opacity:1; }
+.panel-body.hidden { max-height:0; opacity:0; }
+.language-section { padding:16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.lang-toggle { display:flex; gap:10px; }
+.lang-btn { flex:1; background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:1px; }
+.info-section { padding:16px 20px; background: rgba(0,0,0,0.2); }
+.version, .credit { color: rgba(255,255,255,0.6); font-size:12px; font-weight:500; text-align:center; margin-bottom:8px; }
+.links { display:flex; justify-content:center; gap:16px; font-size:11px; }
+.links a { color: #667eea; text-decoration:none; transition:all 0.2s; }
+.slider-container { display:none; padding:12px 0 0 0; animation: fadeIn 0.4s ease; margin-top:12px; }
+.slider-container.active { display:block; }
+.slider-header { display:flex; justify-content:space-between; align-items:center; margin:0 20px 8px 20px; }
+.slider-label { color: rgba(255,255,255,0.9); font-size:13px; font-weight:600; }
+.slider-value { color:#fff; font-size:13px; font-weight:700; }
+.slider-track { margin:0 20px 12px 20px; }
+.slider { width:100%; height:8px; border-radius:6px; background: linear-gradient(90deg,#2b3440 0%, #27323f 100%); outline:none; -webkit-appearance:none; cursor:pointer; transition:all .25s; }
+.slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background: linear-gradient(135deg,#667eea 0%, #764ba2 100%); box-shadow:0 6px 14px rgba(102,126,234,0.28); border:2px solid rgba(255,255,255,0.08); }
+.start-btn { width: calc(100% - 40px); margin:0 20px 16px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; }
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+@media (max-width:480px) { .panel-container { top:10px; right:10px; left:10px; width:auto; } }
             `;
             this.shadow.appendChild(style);
 
+            // read persisted delay for UI initialization
+            const lastDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
+
             const panelHTML = `
-                <div class="panel-container">
-                    <div class="panel">
-                        <div class="header">
-                            <div class="title">${t('title')}</div>
-                            <button class="minimize-btn" id="minimize-btn">−</button>
-                        </div>
-                        <div class="status-section">
-                            <div class="status-box">
-                                <div class="status-content">
-                                    <div class="status-dot info" id="status-dot"></div>
-                                    <div class="status-text" id="status-text">${t('pleaseSolveCaptcha')}</div>
-                                </div>
-                            </div>
+<div class="panel-container">
+  <div class="panel">
+    <div class="header">
+      <div class="title">${t('title')}</div>
+      <button class="minimize-btn" id="minimize-btn">−</button>
+    </div>
 
-                            <div class="slider-container" id="slider-container">
-                                <div class="slider-header">
-                                    <span class="slider-label">Redirect delay:</span>
-                                    <span class="slider-value" id="slider-value">0s</span>
-                                </div>
-                                <div class="slider-track">
-                                    <input type="range" min="0" max="60" value="0" class="slider" id="delay-slider">
-                                </div>
-                                <button class="start-btn" id="start-btn">Start Redirect</button>
-                            </div>
-                        </div>
+    <div class="status-section">
+      <div class="status-box">
+        <div class="status-content">
+          <div class="status-dot info" id="status-dot"></div>
+          <div class="status-text" id="status-text">${t('pleaseSolveCaptcha')}</div>
+        </div>
+      </div>
 
-                        <div class="panel-body" id="panel-body">
-                            <div class="language-section">
-                                <div class="lang-toggle">
-                                    <button class="lang-btn ${currentLanguage === 'vi' ? 'active' : ''}" data-lang="vi">Tiếng Việt</button>
-                                    <button class="lang-btn ${currentLanguage === 'en' ? 'active' : ''}" data-lang="en">English</button>
-                                </div>
-                            </div>
-                            <div class="info-section">
-                                <div class="version" id="version">${t('version')}</div>
-                                <div class="credit" id="credit">${t('madeBy')}</div>
-                                <div class="links">
-                                    <a href="https://www.youtube.com/@dyydeptry" target="_blank">YouTube</a>
-                                    <a href="https://discord.gg/DWyEfeBCzY" target="_blank">Discord</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      <div class="slider-container" id="slider-container">
+        <div class="slider-header">
+          <span class="slider-label">Redirect delay:</span>
+          <span class="slider-value" id="slider-value">${lastDelay}s</span>
+        </div>
+        <div class="slider-track">
+          <input type="range" min="0" max="60" value="${lastDelay}" class="slider" id="delay-slider">
+        </div>
+        <button class="start-btn" id="start-btn">Start Redirect</button>
+      </div>
+    </div>
+
+    <div class="panel-body" id="panel-body">
+      <div class="language-section">
+        <div class="lang-toggle">
+          <button class="lang-btn ${currentLanguage === 'vi' ? 'active' : ''}" data-lang="vi">Tiếng Việt</button>
+          <button class="lang-btn ${currentLanguage === 'en' ? 'active' : ''}" data-lang="en">English</button>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="version" id="version">${t('version')}</div>
+        <div class="credit" id="credit">${t('madeBy')}</div>
+        <div class="links">
+          <a href="https://www.youtube.com/@dyydeptry" target="_blank">YouTube</a>
+          <a href="https://discord.gg/DWyEfeBCzY" target="_blank">Discord</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
             `;
+
             const wrapper = document.createElement('div');
             wrapper.innerHTML = panelHTML;
             this.shadow.appendChild(wrapper.firstElementChild);
 
+            // elements
             this.panel = this.shadow.querySelector('.panel');
             this.statusText = this.shadow.querySelector('#status-text');
             this.statusDot = this.shadow.querySelector('#status-dot');
@@ -223,13 +206,23 @@
             this.langBtns = Array.from(this.shadow.querySelectorAll('.lang-btn'));
             this.body = this.shadow.querySelector('#panel-body');
             this.minimizeBtn = this.shadow.querySelector('#minimize-btn');
-
             this.sliderContainer = this.shadow.querySelector('#slider-container');
             this.sliderValue = this.shadow.querySelector('#slider-value');
             this.slider = this.shadow.querySelector('#delay-slider');
             this.startBtn = this.shadow.querySelector('#start-btn');
 
+            // attach container to document
             document.documentElement.appendChild(this.container);
+
+            // Ensure selectedDelay is in sync with UI immediately
+            // (selectedDelay is a global variable)
+            try {
+                selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
+                this.slider.value = String(selectedDelay);
+                this.sliderValue.textContent = `${selectedDelay}s`;
+            } catch (e) {
+                if (debug) console.warn('Failed to initialize slider from storage', e);
+            }
         }
 
         setupEventListeners() {
@@ -246,14 +239,22 @@
                 this.minimizeBtn.textContent = this.isMinimized ? '+' : '−';
             });
 
+            // slider change updates selectedDelay and persists immediately
             this.slider.addEventListener('input', (e) => {
                 selectedDelay = parseInt(e.target.value);
                 this.sliderValue.textContent = `${selectedDelay}s`;
+                try {
+                    localStorage.setItem(STORAGE_KEY_DELAY, String(selectedDelay));
+                } catch (err) {
+                    if (debug) console.warn('Could not save delay to localStorage', err);
+                }
             });
 
+            // start button triggers the callback with current selectedDelay
             this.startBtn.addEventListener('click', () => {
                 if (this.onStartCallback) {
                     try {
+                        // pass the current selectedDelay value
                         this.onStartCallback(selectedDelay);
                     } catch (err) {
                         if (debug) console.error('[Debug] onStartCallback error', err);
@@ -263,7 +264,9 @@
         }
 
         updateLanguage() {
-            localStorage.setItem('lang', currentLanguage);
+            try {
+                localStorage.setItem(STORAGE_KEY_LANG, currentLanguage);
+            } catch (e) {}
             this.langBtns.forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.lang === currentLanguage);
             });
@@ -280,7 +283,6 @@
             this.currentMessageKey = messageKeyOrTitle;
             this.currentType = (typeof typeOrSubtitle === 'string' && ['info','success','warning','error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
             this.currentReplacements = replacements;
-
             let message = '';
             if (translations[currentLanguage] && translations[currentLanguage][messageKeyOrTitle]) {
                 message = t(messageKeyOrTitle, replacements);
@@ -290,41 +292,57 @@
             } else {
                 message = (typeof typeOrSubtitle === 'string' && ['info','success','warning','error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
             }
-
             this.statusText.textContent = message;
             this.statusDot.className = `status-dot ${this.currentType}`;
         }
 
         showBypassingWorkink() { this.show('captchaSuccessBypassing', 'success'); }
 
+        // Called when a destination is ready and we want to show the slider / allow the user to start redirect
         showCaptchaComplete() {
             this.sliderContainer.classList.add('active');
             this.show('bypassSuccess', 'success');
+            // ensure slider UI shows current chosen delay
             this.sliderValue.textContent = `${selectedDelay}s`;
+            try {
+                this.slider.value = String(selectedDelay);
+            } catch (e) {}
         }
 
-        setCallback(callback) { this.onStartCallback = callback; }
+        // allow external code to set the Start button action
+        setCallback(callback) {
+            this.onStartCallback = callback;
+        }
 
+        // start a countdown that replaces the status text with a single "Redirecting in Xs..." message
         startCountdown(seconds) {
             this.sliderContainer.classList.remove('active');
-            this.startBtn.disabled = true;
-            let remaining = seconds;
-            this.show('redirectingToWork', 'info');
+            try { this.startBtn.disabled = true; } catch (e) {}
+            let remaining = Math.max(0, parseInt(seconds) || 0);
+
+            // Immediately show consistent message
+            this.show(`Redirecting in ${remaining}s...`, 'info');
             this.statusText.textContent = `Redirecting in ${remaining}s...`;
+
             const interval = setInterval(() => {
                 remaining--;
                 if (remaining > 0) {
                     this.statusText.textContent = `Redirecting in ${remaining}s...`;
                 } else {
                     clearInterval(interval);
+                    // final message can be "Redirecting..." just before redirect if desired
+                    this.statusText.textContent = `Redirecting...`;
                 }
             }, 1000);
+
+            return {
+                stop: () => clearInterval(interval)
+            };
         }
     }
 
     // ---------- instantiate GUI ----------
     let panel = null;
-    let selectedDelay = 0;
     setTimeout(() => {
         try {
             panel = new BypassPanel();
@@ -530,7 +548,7 @@
 
                 // After spoofing all socials, wait 3000ms and then refresh the page to get the updated socials count.
                 if (debug) console.log('[Debug] Completed social spoofing. Waiting 3000ms before reload...');
-                await sleep(3000);
+                await sleep(2000);
 
                 try { sessionStorage.setItem('dyrian_last_spoof', Date.now().toString()); } catch (e) {}
                 if (panel) panel.show('reloading', 'info');
