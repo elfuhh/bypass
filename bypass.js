@@ -1045,8 +1045,6 @@
                     // immediate as above (already hooked)
                 } else {
                     const remainingWait = waitTimeSeconds - secondsPassed;
-                    // show waiting then reveal slider after remainingWait
-                    if (panel) panel.show('pleaseReload', 'info'); // reuse a neutral message
                     setTimeout(() => {
                         if (panel) {
                             panel.show('bypassSuccess', 'success');
