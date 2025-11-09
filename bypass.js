@@ -1,13 +1,11 @@
 (() => {
     'use strict';
 
-    const host = location.hostname; // check host
-    const debug = true; // enable debug logs (console)
+    const host = location.hostname;
+    const debug = true;
 
-    let selectedDelay = 0;
-    let currentLanguage = localStorage.getItem('lang') || 'vi'; // default language: vi/en
-
-    // Translations (bypassSuccess simplified — no {time})
+    // ---------- Translations used by imported GUI (from 1st code) ----------
+    let currentLanguage = localStorage.getItem('lang') || 'vi';
     const translations = {
         vi: {
             title: "Dyrian and elfuhh Bypass",
@@ -38,16 +36,16 @@
             madeBy: "Made by DyRian and elfuhh (based on IHaxU)"
         }
     };
-
     function t(key, replacements = {}) {
-        if (!translations[currentLanguage] || !translations[currentLanguage][key]) return key;
-        let text = translations[currentLanguage][key];
-        Object.keys(replacements).forEach(placeholder => {
-            text = text.replace(`{${placeholder}}`, replacements[placeholder]);
+        const map = translations[currentLanguage] && translations[currentLanguage][key] ? translations[currentLanguage][key] : key;
+        let text = map;
+        Object.keys(replacements).forEach(k => {
+            text = text.replace(`{${k}}`, replacements[k]);
         });
         return text;
     }
 
+    // ---------- GUI: BypassPanel (imported from 1st code) ----------
     class BypassPanel {
         constructor() {
             this.container = null;
@@ -453,7 +451,7 @@
 
             this.shadow.appendChild(style);
 
-            // NOTE: slider container moved directly under .status-section (inside it) so it sits right below status text.
+            // NOTE: slider container placed directly inside the status-section to be right below status text
             const panelHTML = `
                 <div class="panel-container">
                     <div class="panel">
@@ -461,7 +459,6 @@
                             <div class="title">${t('title')}</div>
                             <button class="minimize-btn" id="minimize-btn">−</button>
                         </div>
-
                         <div class="status-section">
                             <div class="status-box">
                                 <div class="status-content">
@@ -470,7 +467,7 @@
                                 </div>
                             </div>
 
-                            <!-- Slider placed directly below the status text (inside the status-section) -->
+                            <!-- Slider placed directly under the status text -->
                             <div class="slider-container" id="slider-container">
                                 <div class="slider-header">
                                     <span class="slider-label">Redirect delay:</span>
@@ -482,7 +479,6 @@
                                 <button class="start-btn" id="start-btn">Start Redirect</button>
                             </div>
                         </div>
-
                         <div class="panel-body" id="panel-body">
                             <div class="language-section">
                                 <div class="lang-toggle">
@@ -501,11 +497,9 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             `;
-
             const wrapper = document.createElement('div');
             wrapper.innerHTML = panelHTML;
             this.shadow.appendChild(wrapper.firstElementChild);
@@ -542,13 +536,13 @@
                 this.minimizeBtn.textContent = this.isMinimized ? '+' : '−';
             });
 
-            // slider input
+            // slider input updates label and selectedDelay global
             this.slider.addEventListener('input', (e) => {
                 selectedDelay = parseInt(e.target.value);
                 this.sliderValue.textContent = `${selectedDelay}s`;
             });
 
-            // start button
+            // start button triggers callback provided by bypass logic
             this.startBtn.addEventListener('click', () => {
                 if (this.onStartCallback) {
                     try {
@@ -562,25 +556,19 @@
 
         updateLanguage() {
             localStorage.setItem('lang', currentLanguage);
-
             this.langBtns.forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.lang === currentLanguage);
             });
-
             const titleEl = this.shadow.querySelector('.title');
             if (titleEl) titleEl.textContent = t('title');
             if (this.versionEl) this.versionEl.textContent = t('version');
             if (this.creditEl) this.creditEl.textContent = t('madeBy');
-
             if (this.currentMessageKey) {
-                // re-show current message (localized if applicable)
                 this.show(this.currentMessageKey, this.currentType, this.currentReplacements);
             }
         }
 
-        /**
-         * show: either translation key or raw string
-         */
+        // show can accept translation keys or raw strings
         show(messageKeyOrTitle, typeOrSubtitle = 'info', replacements = {}) {
             this.currentMessageKey = messageKeyOrTitle;
             this.currentType = (typeof typeOrSubtitle === 'string' && ['info','success','warning','error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
@@ -593,6 +581,7 @@
                     message = typeOrSubtitle;
                 }
             } else {
+                // raw strings case
                 message = (typeof typeOrSubtitle === 'string' && ['info','success','warning','error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
             }
 
@@ -605,10 +594,11 @@
         }
 
         showCaptchaComplete() {
-            // reveal slider area directly under status (we moved it)
+            // reveal slider and show simplified bypass message
             this.sliderContainer.classList.add('active');
-            // show simplified bypass message
             this.show('bypassSuccess', 'success');
+            // set slider default 0s display when revealed until user moves it
+            this.sliderValue.textContent = `${selectedDelay}s`;
         }
 
         setCallback(callback) {
@@ -616,7 +606,7 @@
         }
 
         startCountdown(seconds) {
-            // hide slider and disable start button while counting down
+            // hide slider while counting
             this.sliderContainer.classList.remove('active');
             this.startBtn.disabled = true;
 
@@ -635,13 +625,22 @@
         }
     }
 
+    // ---------- instantiate GUI ----------
     let panel = null;
-    setTimeout(() => { panel = new BypassPanel(); panel.show('pleaseSolveCaptcha', 'info'); }, 100);
+    let selectedDelay = 0;
+    setTimeout(() => {
+        panel = new BypassPanel();
+        panel.show('pleaseSolveCaptcha', 'info');
+    }, 100);
 
-    // === Bypass logic (merged from original scripts) ===
+    // ---------- Bypass logic (from difz25x) ----------
+    // We'll keep the Work.ink logic & Volcano logic and integrate with the GUI above.
+    // Many functions were preserved and adapted to call the GUI methods (panel.show, panel.showCaptchaComplete, panel.setCallback, panel.startCountdown).
+
     if (host.includes("key.volcano.wtf")) handleVolcano();
     else if (host.includes("work.ink")) handleWorkInk();
 
+    // --- VOLCANO handler (kept) ---
     function handleVolcano() {
         if (panel) panel.show('pleaseSolveCaptcha', 'info');
         if (debug) console.log('[Debug] Waiting Captcha');
@@ -737,6 +736,7 @@
         }
     }
 
+    // --- WORK.INK handler (kept/adapted) ---
     function handleWorkInk() {
         if (panel) panel.show('pleaseSolveCaptcha', 'info');
 
@@ -803,7 +803,7 @@
                 if (panel) panel.show('Processing Socials', `Found ${socials.length} socials, spoofing with delays...`);
                 if (debug) console.log('[Debug] More than 1 social detected, spoofing with 1000ms delays...');
 
-                // Spoof all socials with 2000ms delay between each (preserve original behavior)
+                // Spoof all socials with 2000ms delay between each
                 for (let i = 0; i < socials.length; i++) {
                     const soc = socials[i];
                     try {
@@ -816,6 +816,7 @@
                         if (debug) console.error(`[Debug] Error spoofing social [${i+1}/${socials.length}]:`, soc.url, e);
                     }
 
+                    // Wait 2000ms before next social (except after the last one)
                     if (i < socials.length - 1) {
                         await new Promise(resolve => setTimeout(resolve, 2000));
                     }
@@ -824,7 +825,7 @@
                 // Wait a moment for the spoofing to register, then refresh
                 setTimeout(() => {
                     if (debug) console.log('[Debug] Refreshing page to reduce socials...');
-                    if (panel) panel.show('Refreshing...', 'Reloading page...');
+                    if (panel) panel.show('pleaseReload', 'info');
                     window.location.reload();
                 }, 4000);
             } else {
@@ -991,13 +992,13 @@
 
         function startCountdown(url, waitLeft) {
             if (debug) console.log('[Debug] startCountdown: Started with', waitLeft, 'seconds');
-            if (panel) panel.show('bypassSuccess', 'warning');
+            if (panel) panel.show('bypassSuccess', 'success'); // show simplified "Bypass successful" when countdown begins
 
             const interval = setInterval(() => {
                 waitLeft -= 1;
                 if (waitLeft > 0) {
                     if (debug) console.log('[Debug] startCountdown: Time remaining:', waitLeft);
-                    if (panel) panel.show('bypassSuccess', 'warning');
+                    if (panel) panel.show('bypassSuccess', 'success');
                 } else {
                     clearInterval(interval);
                     redirect(url);
@@ -1015,46 +1016,48 @@
                 let waitTimeSeconds = 5;
                 const url = location.href;
                 if (url.includes('42rk6hcq') || url.includes('ito4wckq') || url.includes('pzarvhq1')) {
+                    waitTimeSeconds = 38;
                 }
 
-                if (secondsPassed >= waitTimeSeconds) {
-                    if (panel) {
-                        // show simplified "Bypass successful" and reveal slider placed directly under status text
-                        panel.show('bypassSuccess', 'success');
-                        panel.showCaptchaComplete();
-                        panel.setCallback((delay) => {
-                            if (debug) console.log('[Debug] User selected delay:', delay);
-
-                            if (delay === 0) {
-                                if (debug) console.log('[Debug] Delay is 0, redirecting immediately');
-                                panel.show('redirectingToWork', 'info');
+                // When destination arrives, show simplified "Bypass successful" and reveal slider to allow redirect delay control
+                if (panel) {
+                    // Show the simple message "Bypass successful"
+                    panel.show('bypassSuccess', 'success'); // translation value is "Bypass successful"
+                    // Reveal slider and wire callback to actually redirect
+                    panel.showCaptchaComplete && panel.showCaptchaComplete();
+                    panel.setCallback && panel.setCallback((delay) => {
+                        if (debug) console.log('[Debug] User selected delay:', delay);
+                        if (delay === 0) {
+                            if (debug) console.log('[Debug] Delay is 0, redirecting immediately');
+                            panel.show('redirectingToWork', 'info');
+                            redirect(data.url);
+                        } else {
+                            panel.startCountdown && panel.startCountdown(delay);
+                            setTimeout(() => {
                                 redirect(data.url);
-                            } else {
-                                panel.startCountdown(delay);
-                                setTimeout(() => {
-                                    redirect(data.url);
-                                }, (delay + 1) * 1000);
-                            }
-                        });
-                    }
+                            }, (delay + 1) * 1000);
+                        }
+                    });
+                }
+
+                // If we still need to wait server side before redirecting automatically, preserve that behavior:
+                if (secondsPassed >= waitTimeSeconds) {
+                    // immediate as above (already hooked)
                 } else {
                     const remainingWait = waitTimeSeconds - secondsPassed;
-                    if (panel) {
-                        panel.show('Bypass successful', `Waiting ${Math.ceil(remainingWait)}s...`);
-                    }
+                    // show waiting then reveal slider after remainingWait
+                    if (panel) panel.show('pleaseReload', 'info'); // reuse a neutral message
                     setTimeout(() => {
                         if (panel) {
                             panel.show('bypassSuccess', 'success');
-                            panel.showCaptchaComplete();
-                            panel.setCallback((delay) => {
+                            panel.showCaptchaComplete && panel.showCaptchaComplete();
+                            panel.setCallback && panel.setCallback((delay) => {
                                 if (debug) console.log('[Debug] User selected delay:', delay);
-
                                 if (delay === 0) {
-                                    if (debug) console.log('[Debug] Delay is 0, redirecting immediately');
                                     panel.show('redirectingToWork', 'info');
                                     redirect(data.url);
                                 } else {
-                                    panel.startCountdown(delay);
+                                    panel.startCountdown && panel.startCountdown(delay);
                                     setTimeout(() => {
                                         redirect(data.url);
                                     }, (delay + 1) * 1000);
@@ -1063,6 +1066,7 @@
                         }
                     }, remainingWait * 1000);
                 }
+
                 return onLinkDestinationA ? onLinkDestinationA.apply(this, args): undefined;
             };
         }
@@ -1202,6 +1206,8 @@
                                 if (debug) console.log('[Debug]: Kit ready', created, app);
                             }
                             resolve([created, app, ...args]);
+                        }).catch(() => {
+                            resolve(result);
                         });
                     });
                 }
