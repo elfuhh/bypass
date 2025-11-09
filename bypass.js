@@ -20,8 +20,9 @@
             bypassSuccess: "Bypass thành công",
             backToCheckpoint: "Đang về lại Checkpoint...",
             captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-            version: "Phiên bản v1.6.3.0",
-            madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)"
+            version: "Phiên bản v1.8.0.0",
+            madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
+            autoRedirect: "Tự động chuyển hướng"
         },
         en: {
             title: "Dyrian and elfuhh Bypass",
@@ -36,8 +37,9 @@
             bypassSuccess: "Bypass successful",
             backToCheckpoint: "Returning to checkpoint...",
             captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-            version: "Version v1.6.3.0",
-            madeBy: "Made by DyRian and elfuhh (based on IHaxU)"
+            version: "Version v1.8.0.0",
+            madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
+            autoRedirect: "Auto-redirect"
         }
     };
 
@@ -53,9 +55,11 @@
     // ---------- persistent setting keys ----------
     const STORAGE_KEY_DELAY = 'dyrian_redirect_delay';
     const STORAGE_KEY_LANG = 'lang';
+    const STORAGE_KEY_AUTO = 'dyrian_auto_redirect';
 
     // selectedDelay: global variable used by GUI and callback
     let selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
+    let autoRedirectEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
 
     // ---------- GUI: BypassPanel ----------
     class BypassPanel {
@@ -80,6 +84,7 @@
             this.sliderValue = null;
             this.slider = null;
             this.startBtn = null;
+            this.autoToggle = null;
             this.onStartCallback = null;
 
             this.init();
@@ -101,54 +106,495 @@
 
             const style = document.createElement('style');
             style.textContent = `
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 * { margin:0; padding:0; box-sizing:border-box; }
-.panel-container { position:fixed; top:20px; right:20px; width:400px; z-index:2147483647; font-family:'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif; }
-.panel { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); transition: all 0.3s ease; }
-@keyframes slideIn { from { opacity:0; transform:translateX(100px) scale(0.9); } to { opacity:1; transform:translateX(0) scale(1); } }
-.header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px 20px; position:relative; overflow:hidden; display:flex; justify-content:space-between; align-items:center; }
-.title { font-size:20px; font-weight:700; color:#fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index:1; }
-.minimize-btn { background: rgba(255,255,255,0.15); border:none; color:#fff; width:32px; height:32px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:20px; font-weight:700; z-index:1; }
-.status-section { padding:20px; border-bottom: 1px solid rgba(255,255,255,0.05); position:relative; }
-.status-box { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
-.status-content { display:flex; align-items:center; gap:12px; position:relative; z-index:1; }
-.status-dot { width:14px; height:14px; border-radius:50%; animation: pulse 2s ease-in-out infinite; box-shadow: 0 0 12px currentColor; flex-shrink:0; }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.7;transform:scale(1.15);} }
-.status-dot.info { background: #60a5fa; }
-.status-dot.success { background:#4ade80; }
-.status-dot.warning { background:#facc15; }
-.status-dot.error { background:#f87171; }
-.status-text { color:#fff; font-size:14px; font-weight:500; flex:1; line-height:1.5; }
-.panel-body { max-height:500px; overflow:hidden; transition:all 0.3s ease; opacity:1; }
-.panel-body.hidden { max-height:0; opacity:0; }
-.language-section { padding:16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-.lang-toggle { display:flex; gap:10px; }
-.lang-btn { flex:1; background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:1px; }
-.info-section { padding:16px 20px; background: rgba(0,0,0,0.2); }
-.version, .credit { color: rgba(255,255,255,0.6); font-size:12px; font-weight:500; text-align:center; margin-bottom:8px; }
-.links { display:flex; justify-content:center; gap:16px; font-size:11px; }
-.links a { color: #667eea; text-decoration:none; transition:all 0.2s; }
-.slider-container { display:none; padding:12px 0 0 0; animation: fadeIn 0.4s ease; margin-top:12px; }
-.slider-container.active { display:block; }
-.slider-header { display:flex; justify-content:space-between; align-items:center; margin:0 20px 8px 20px; }
-.slider-label { color: rgba(255,255,255,0.9); font-size:13px; font-weight:600; }
-.slider-value { color:#fff; font-size:13px; font-weight:700; }
-.slider-track { margin:0 20px 12px 20px; }
-.slider { width:100%; height:8px; border-radius:6px; background: linear-gradient(90deg,#2b3440 0%, #27323f 100%); outline:none; -webkit-appearance:none; cursor:pointer; transition:all .25s; }
-.slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background: linear-gradient(135deg,#667eea 0%, #764ba2 100%); box-shadow:0 6px 14px rgba(102,126,234,0.28); border:2px solid rgba(255,255,255,0.08); }
-.start-btn { width: calc(100% - 40px); margin:0 20px 16px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; }
-@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
-@media (max-width:480px) { .panel-container { top:10px; right:10px; left:10px; width:auto; } }
+
+@keyframes fadeInScale {
+    from { opacity:0; transform:scale(0.9) translateY(20px); }
+    to { opacity:1; transform:scale(1) translateY(0); }
+}
+
+@keyframes neonPulse {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(139, 92, 246, 0.4),
+                    0 0 10px rgba(139, 92, 246, 0.3),
+                    0 0 20px rgba(139, 92, 246, 0.2),
+                    inset 0 0 10px rgba(139, 92, 246, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.6),
+                    0 0 20px rgba(139, 92, 246, 0.4),
+                    0 0 30px rgba(139, 92, 246, 0.3),
+                    inset 0 0 15px rgba(139, 92, 246, 0.15);
+    }
+}
+
+@keyframes statusGlow {
+    0%, 100% {
+        box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    }
+    50% {
+        box-shadow: 0 0 15px currentColor, 0 0 30px currentColor, 0 0 45px currentColor;
+    }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; max-height: 0; transform: translateY(-10px); }
+    to { opacity: 1; max-height: 500px; transform: translateY(0); }
+}
+
+.panel-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    width: 400px;
+    z-index: 2147483647;
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.panel {
+    background: #0d0d0d;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.9),
+                0 0 0 1px rgba(139, 92, 246, 0.1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.panel:hover {
+    border-color: rgba(139, 92, 246, 0.25);
+    transform: translateY(-2px);
+}
+
+.header {
+    background: linear-gradient(135deg, #0d0d0d 0%, #151515 100%);
+    padding: 24px;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #8b5cf6;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    z-index: 1;
+}
+
+.minimize-btn {
+    background: transparent;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #8b5cf6;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 18px;
+    font-weight: 700;
+    z-index: 1;
+}
+
+.minimize-btn:hover {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: #8b5cf6;
+    transform: rotate(180deg);
+}
+
+.minimize-btn:active {
+    transform: scale(0.9) rotate(180deg);
+}
+
+.status-section {
+    padding: 24px;
+    position: relative;
+    background: #0d0d0d;
+}
+
+.status-box {
+    background: #151515;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 16px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.status-box:hover {
+    border-color: rgba(139, 92, 246, 0.35);
+    background: #181818;
+}
+
+.status-content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: statusGlow 2s ease-in-out infinite;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.status-dot::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    opacity: 0.3;
+}
+
+.status-dot.info { background: #3b82f6; color: #3b82f6; }
+.status-dot.success { background: #10b981; color: #10b981; }
+.status-dot.warning { background: #f59e0b; color: #f59e0b; }
+.status-dot.error { background: #ef4444; color: #ef4444; }
+
+.status-text {
+    color: #d1d5db;
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1;
+    line-height: 1.6;
+    letter-spacing: 0.3px;
+}
+
+.panel-body {
+    max-height: 600px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 1;
+}
+
+.panel-body.hidden {
+    max-height: 0;
+    opacity: 0;
+}
+
+.language-section {
+    padding: 24px;
+    background: #0d0d0d;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.lang-toggle {
+    display: flex;
+    gap: 10px;
+    background: #151515;
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.lang-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+}
+
+.lang-btn:hover {
+    color: #9ca3af;
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.lang-btn.active {
+    background: #8b5cf6;
+    color: #000;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.info-section {
+    padding: 24px;
+    background: #0d0d0d;
+    text-align: center;
+}
+
+.version, .credit {
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.links {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    font-size: 11px;
+    margin-top: 12px;
+}
+
+.links a {
+    color: #8b5cf6;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.links a:hover {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: #8b5cf6;
+}
+
+.slider-container {
+    display: none;
+    padding: 0;
+    animation: slideDown 0.3s ease;
+    margin-top: 16px;
+}
+
+.slider-container.active {
+    display: block;
+}
+
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 24px 10px 24px;
+}
+
+.slider-label {
+    color: #9ca3af;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.slider-value {
+    color: #8b5cf6;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    min-width: 45px;
+    text-align: center;
+}
+
+.slider-track {
+    margin: 0 24px 16px 24px;
+}
+
+.slider {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #1f1f1f;
+    outline: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.slider:hover {
+    background: #252525;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #8b5cf6;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+}
+
+.slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.3);
+}
+
+.slider::-webkit-slider-thumb:active {
+    transform: scale(1.1);
+}
+
+.slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #8b5cf6;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+}
+
+.auto-redirect-container {
+    margin: 0 24px 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #151515;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.auto-redirect-container:hover {
+    background: #181818;
+    border-color: rgba(139, 92, 246, 0.35);
+}
+
+.toggle-label {
+    color: #d1d5db;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #1f1f1f;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 28px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 3px;
+    background: linear-gradient(135deg, #4b5563, #6b7280);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+input:checked + .toggle-slider {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border-color: #8b5cf6;
+    animation: neonPulse 2s ease-in-out infinite;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+    background: linear-gradient(135deg, #fff, #f3f4f6);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
+}
+
+.toggle-slider:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+}
+
+.start-btn {
+    width: calc(100% - 48px);
+    margin: 0 24px 20px 24px;
+    background: #8b5cf6;
+    color: #000;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+    background: #9d6ff7;
+}
+
+.start-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+}
+
+.start-btn.hidden {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .panel-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+    }
+}
             `;
             this.shadow.appendChild(style);
 
             // read persisted delay for UI initialization
             const lastDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
+            const autoEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
 
             const panelHTML = `
 <div class="panel-container">
   <div class="panel">
     <div class="header">
-      <div class="title">${t('title')}</div>
+      <div class="title">WORKINK BYPASS</div>
       <button class="minimize-btn" id="minimize-btn">−</button>
     </div>
 
@@ -168,7 +614,14 @@
         <div class="slider-track">
           <input type="range" min="0" max="60" value="${lastDelay}" class="slider" id="delay-slider">
         </div>
-        <button class="start-btn" id="start-btn">Start Redirect</button>
+        <div class="auto-redirect-container" id="auto-container">
+          <label class="toggle-switch">
+            <input type="checkbox" id="auto-toggle" ${autoEnabled ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">${t('autoRedirect')}</span>
+        </div>
+        <button class="start-btn ${autoEnabled ? 'hidden' : ''}" id="start-btn">Start Redirect</button>
       </div>
     </div>
 
@@ -210,12 +663,13 @@
             this.sliderValue = this.shadow.querySelector('#slider-value');
             this.slider = this.shadow.querySelector('#delay-slider');
             this.startBtn = this.shadow.querySelector('#start-btn');
+            this.autoToggle = this.shadow.querySelector('#auto-toggle');
+            this.autoContainer = this.shadow.querySelector('#auto-container');
 
             // attach container to document
             document.documentElement.appendChild(this.container);
 
             // Ensure selectedDelay is in sync with UI immediately
-            // (selectedDelay is a global variable)
             try {
                 selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
                 this.slider.value = String(selectedDelay);
@@ -239,6 +693,25 @@
                 this.minimizeBtn.textContent = this.isMinimized ? '+' : '−';
             });
 
+            // auto-redirect toggle
+            this.autoToggle.addEventListener('change', (e) => {
+                autoRedirectEnabled = e.target.checked;
+                try {
+                    localStorage.setItem(STORAGE_KEY_AUTO, String(autoRedirectEnabled));
+                } catch (err) {
+                    if (debug) console.warn('Could not save auto-redirect to localStorage', err);
+                }
+
+                // Show/hide start button based on auto-redirect state
+                if (autoRedirectEnabled) {
+                    this.startBtn.classList.add('hidden');
+                } else {
+                    this.startBtn.classList.remove('hidden');
+                }
+
+                if (debug) console.log('[Debug] Auto-redirect:', autoRedirectEnabled);
+            });
+
             // slider change updates selectedDelay and persists immediately
             this.slider.addEventListener('input', (e) => {
                 selectedDelay = parseInt(e.target.value);
@@ -254,7 +727,6 @@
             this.startBtn.addEventListener('click', () => {
                 if (this.onStartCallback) {
                     try {
-                        // pass the current selectedDelay value
                         this.onStartCallback(selectedDelay);
                     } catch (err) {
                         if (debug) console.error('[Debug] onStartCallback error', err);
@@ -271,9 +743,14 @@
                 btn.classList.toggle('active', btn.dataset.lang === currentLanguage);
             });
             const titleEl = this.shadow.querySelector('.title');
-            if (titleEl) titleEl.textContent = t('title');
+            if (titleEl) titleEl.textContent = 'BYPASS SYSTEM';
             if (this.versionEl) this.versionEl.textContent = t('version');
             if (this.creditEl) this.creditEl.textContent = t('madeBy');
+
+            // Update toggle label
+            const toggleLabel = this.shadow.querySelector('.toggle-label');
+            if (toggleLabel) toggleLabel.textContent = t('autoRedirect');
+
             if (this.currentMessageKey) {
                 this.show(this.currentMessageKey, this.currentType, this.currentReplacements);
             }
@@ -301,12 +778,33 @@
         // Called when a destination is ready and we want to show the slider / allow the user to start redirect
         showCaptchaComplete() {
             this.sliderContainer.classList.add('active');
+            this.sliderContainer.style.display = '';
             this.show('bypassSuccess', 'success');
-            // ensure slider UI shows current chosen delay
             this.sliderValue.textContent = `${selectedDelay}s`;
             try {
                 this.slider.value = String(selectedDelay);
             } catch (e) {}
+
+            // If auto-redirect is enabled, automatically trigger the callback after showing UI
+            if (autoRedirectEnabled) {
+                if (debug) console.log('[Debug] Auto-redirect is enabled, starting auto countdown with delay:', selectedDelay);
+
+                // Use a longer delay to ensure UI is fully rendered
+                setTimeout(() => {
+                    if (this.onStartCallback) {
+                        if (debug) console.log('[Debug] Calling onStartCallback with delay:', selectedDelay);
+                        try {
+                            this.onStartCallback(selectedDelay);
+                        } catch (err) {
+                            if (debug) console.error('[Debug] Auto-redirect callback error', err);
+                        }
+                    } else {
+                        if (debug) console.warn('[Debug] onStartCallback is not set!');
+                    }
+                }, 500);
+            } else {
+                if (debug) console.log('[Debug] Auto-redirect is disabled, waiting for manual start');
+            }
         }
 
         // allow external code to set the Start button action
@@ -316,13 +814,26 @@
 
         // start a countdown that replaces the status text with a single "Redirecting in Xs..." message
         startCountdown(seconds) {
-            this.sliderContainer.classList.remove('active');
-            try { this.startBtn.disabled = true; } catch (e) {}
+            if (debug) console.log('[Debug] startCountdown called with seconds:', seconds);
+
+            // Hide only the slider elements, keep auto-redirect toggle visible
+            const sliderHeader = this.shadow.querySelector('.slider-header');
+            const sliderTrack = this.shadow.querySelector('.slider-track');
+            if (sliderHeader) sliderHeader.style.display = 'none';
+            if (sliderTrack) sliderTrack.style.display = 'none';
+            if (this.startBtn) this.startBtn.style.display = 'none';
+
+            if (debug) console.log('[Debug] Slider elements hidden, auto-toggle remains visible');
+
+            try {
+                if (this.startBtn) this.startBtn.disabled = true;
+            } catch (e) {}
+
             let remaining = Math.max(0, parseInt(seconds) || 0);
 
-            // Immediately show consistent message
-            this.show(`Redirecting in ${remaining}s...`, 'info');
+            // Directly set the text without calling show() to avoid conflicts
             this.statusText.textContent = `Redirecting in ${remaining}s...`;
+            this.statusDot.className = 'status-dot info';
 
             const interval = setInterval(() => {
                 remaining--;
@@ -330,7 +841,6 @@
                     this.statusText.textContent = `Redirecting in ${remaining}s...`;
                 } else {
                     clearInterval(interval);
-                    // final message can be "Redirecting..." just before redirect if desired
                     this.statusText.textContent = `Redirecting...`;
                 }
             }, 1000);
@@ -506,10 +1016,6 @@
 
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        // New behavior:
-        // - ALWAYS check socials (via periodic check and on linkInfo arrival).
-        // - If socials.length > 1 => enter "socials-only" mode: spoof each social with 1s gap, then wait 3s, then reload. Repeat until <=1.
-        // - If socials.length <= 1 => exit socials-only mode, show "Please solve the CAPTCHA" and DO NOT automatically trigger bypass; wait for the user to solve captcha (turnstile response or other server signals). When the user solves captcha (types.tr or onLinkDestination after captcha), normal bypass flow runs.
         async function checkAndHandleSocials() {
             if (!linkInfoA) {
                 if (debug) console.log('[Debug] checkAndHandleSocials: no linkInfoA yet');
@@ -524,7 +1030,6 @@
             if (debug) console.log('[Debug] checkAndHandleSocials: found socials count', socials.length);
 
             if (socials.length > 1) {
-                // Enter socials-only mode: do NOT show "please solve captcha"
                 socialCheckInProgress = true;
                 if (panel) panel.show('Processing Socials', `Found ${socials.length} socials, spoofing with delays...`);
                 if (debug) console.log('[Debug] Spoofing socials loop start');
@@ -542,31 +1047,25 @@
                     } catch (e) {
                         if (debug) console.error('[Debug] Error spoofing social', soc.url, e);
                     }
-                    // wait 1000ms between social spoofs
                     if (i < socials.length - 1) await sleep(1000);
                 }
 
-                // After spoofing all socials, wait 3000ms and then refresh the page to get the updated socials count.
                 if (debug) console.log('[Debug] Completed social spoofing. Waiting 3000ms before reload...');
                 await sleep(2000);
 
                 try { sessionStorage.setItem('dyrian_last_spoof', Date.now().toString()); } catch (e) {}
                 if (panel) panel.show('reloading', 'info');
-                // reload to get updated LinkInfo from server/JS runtime
                 window.location.reload();
                 return;
             } else {
-                // socials <= 1: exit socials-only mode, show captcha prompt and DO NOT auto-trigger bypass
                 socialCheckInProgress = false;
                 if (debug) console.log('[Debug] Socials <=1: returning to normal captcha UI; waiting for user solve');
                 if (panel) panel.show('pleaseSolveCaptcha', 'info');
-                // Do not call triggerBypass automatically here; wait for user to solve captcha (for example, createSendMessageProxy will trigger on types.tr)
                 return;
             }
         }
 
         function triggerBypass(reason) {
-            // This function should only be called after captcha is solved (e.g., types.tr) or other legit triggers.
             if (bypassTriggered) {
                 if (debug) console.log('[Debug] triggerBypass skipped (already triggered)');
                 return;
@@ -575,7 +1074,6 @@
             if (debug) console.log('[Debug] triggerBypass via:', reason);
             if (panel) panel.showBypassingWorkink();
 
-            // keep spoofing until destination arrives
             let retryCount = 0;
             async function keepSpoofing() {
                 if (destinationReceived) {
@@ -585,14 +1083,12 @@
                 retryCount++;
                 if (debug) console.log('[Debug] keepSpoofing attempt', retryCount);
                 try {
-                    // spoof any present socials (including the last remaining one)
                     if (linkInfoA && sendMessageA && sessionControllerA) {
                         const socials = linkInfoA.socials || [];
                         for (let i = 0; i < socials.length; i++) {
                             try { sendMessageA.call(sessionControllerA, types.ss, { url: socials[i].url }); } catch (e) {}
                         }
                     }
-                    // spoof monetizations etc.
                     spoofWorkink();
                 } catch (e) {
                     if (debug) console.error('[Debug] keepSpoofing error', e);
@@ -681,16 +1177,13 @@
                     if (debug) console.log('[Debug] Message sent:', pt, pd);
                 }
 
-                // block ad messages
                 if (pt === types.ad) {
                     if (debug) console.log('[Debug] Blocking adblocker message');
                     return;
                 }
 
-                // If Turnstile/captcha response is seen, run bypass (user solved captcha)
                 if (pt === types.tr) {
                     if (debug) console.log('[Debug] Captcha/turnstile response detected -> user solved captcha');
-                    // only trigger bypass when social count <=1 (we're already enforcing social-only refresh earlier).
                     const socials = linkInfoA?.socials || [];
                     if (socials.length <= 1) {
                         triggerBypass('tr');
@@ -708,9 +1201,7 @@
                 const info = args[0];
                 linkInfoA = info;
                 if (debug) console.log('[Debug] Link info arrived:', info);
-                // Always check socials when link info arrives
                 try { checkAndHandleSocials(); } catch (e) { if (debug) console.error(e); }
-                // Also spoof once proactively (safe)
                 try { spoofWorkink(); } catch (e) { if (debug) console.error(e); }
                 try {
                     Object.defineProperty(info, 'isAdblockEnabled', {
@@ -730,22 +1221,6 @@
         function redirect(url) {
             if (debug) console.log('[Debug] Redirecting to:', url);
             window.location.href = url;
-        }
-
-        function startCountdown(url, waitLeft) {
-            if (debug) console.log('[Debug] startCountdown: Started with', waitLeft, 'seconds');
-            if (panel) panel.show('bypassSuccess', 'success');
-
-            const interval = setInterval(() => {
-                waitLeft -= 1;
-                if (waitLeft > 0) {
-                    if (debug) console.log('[Debug] startCountdown: Time remaining:', waitLeft);
-                    if (panel) panel.show('bypassSuccess', 'success');
-                } else {
-                    clearInterval(interval);
-                    redirect(url);
-                }
-            }, 1000);
         }
 
         function createDestinationProxy() {
@@ -770,14 +1245,17 @@
                             panel.show('redirectingToWork', 'info');
                             redirect(data.url);
                         } else {
+                            if (debug) console.log('[Debug] Starting countdown with delay:', delay);
                             panel.startCountdown && panel.startCountdown(delay);
-                            setTimeout(() => { redirect(data.url); }, (delay + 1) * 1000);
+                            setTimeout(() => {
+                                if (debug) console.log('[Debug] Countdown finished, redirecting to:', data.url);
+                                redirect(data.url);
+                            }, (delay + 1) * 1000);
                         }
                     });
                 }
 
                 if (secondsPassed >= waitTimeSeconds) {
-                    // immediate (already handled)
                 } else {
                     const remainingWait = waitTimeSeconds - secondsPassed;
                     setTimeout(() => {
@@ -974,7 +1452,6 @@
 
         setupInterception();
 
-        // Periodically check socials (in case linkInfoA updates without a full reload)
         const periodicChecker = setInterval(() => {
             try {
                 if (linkInfoA && !bypassTriggered) {
@@ -1029,8 +1506,7 @@
                                     const ctrl = sessionControllerA;
                                     const dest = resolveName(ctrl, map.onLD);
 
-                                    if (ctrl && linkInfoA && dest.fn) {
-                                        // Start socials-first check (do NOT show captcha here if socials>1)
+                                    if (ctrl && dest.fn) {
                                         checkAndHandleSocials();
                                         if (debug) console.log('[Debug] GTD: Social check initiated');
                                     } else {
@@ -1052,4 +1528,4 @@
         ob.observe(document.documentElement, { childList: true, subtree: true });
     }
 
-})();
+})()
