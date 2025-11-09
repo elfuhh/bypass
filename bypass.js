@@ -3,6 +3,103 @@
 
     const host = location.hostname;
     const debug = true;
+    const googletagMock = {
+        cmd: [],
+        _loaded_: true,
+        pubads: function() {
+            return {
+                addEventListener: function() {},
+                setTargeting: function() { return this; },
+                enableSingleRequest: function() { return this; },
+                collapseEmptyDivs: function() { return this; },
+                refresh: function() {},
+                getSlots: function() { return []; }
+            };
+        },
+        enableServices: function() {},
+        display: function() {},
+        defineSlot: function() {
+            return {
+                addService: function() { return this; },
+                setTargeting: function() { return this; }
+            };
+        }
+    };
+    Object.defineProperty(window, 'googletag', {
+        get: () => googletagMock,
+        set: () => {},
+        configurable: false,
+        enumerable: true
+    });
+
+    Object.defineProperty(window, 'adsbygoogle', {
+        get: () => [],
+        set: () => {},
+        configurable: false,
+        enumerable: true
+    });
+
+    const originalQuerySelector = Document.prototype.querySelector;
+    const originalQuerySelectorAll = Document.prototype.querySelectorAll;
+
+    const allowedPatterns = [
+        'button', 'input', 'form', '.panel', '#app',
+        '.status', '.slider', '.toggle', 'div', 'span'
+    ];
+
+    Document.prototype.querySelector = function(selector) {
+        if (allowedPatterns.some(pattern => selector.includes(pattern))) {
+            return originalQuerySelector.call(this, selector);
+        }
+        if (selector.includes('adsbygoogle') ||
+            selector.includes('adsense') ||
+            selector.includes('billboard') ||
+            selector.includes('skyscraper')) {
+            return null;
+        }
+        return originalQuerySelector.call(this, selector);
+    };
+
+    Document.prototype.querySelectorAll = function(selector) {
+        if (allowedPatterns.some(pattern => selector.includes(pattern))) {
+            return originalQuerySelectorAll.call(this, selector);
+        }
+        if (selector.includes('adsbygoogle') ||
+            selector.includes('adsense') ||
+            selector.includes('billboard') ||
+            selector.includes('skyscraper')) {
+            return [];
+        }
+        return originalQuerySelectorAll.call(this, selector);
+    };
+
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const url = args[0];
+
+        if (typeof url === 'string' &&
+            (url.includes('/_api/') || url.includes('/api/'))) {
+            return originalFetch.apply(this, args);
+        }
+
+        if (typeof url === 'string' &&
+            (url.includes('googlesyndication') ||
+             url.includes('doubleclick') ||
+             url.includes('googletagservices'))) {
+            return Promise.resolve(new Response('', { status: 200 }));
+        }
+        return originalFetch.apply(this, args);
+    };
+
+
+    const originalRemove = Element.prototype.remove;
+    Element.prototype.remove = function() {
+
+        if (this === window.googletag || this === window.adsbygoogle) {
+            return;
+        }
+        return originalRemove.call(this);
+    };
 
     // ---------- translations used by the GUI ----------
     let currentLanguage = localStorage.getItem('lang') || 'vi';
@@ -20,7 +117,7 @@
             bypassSuccess: "Bypass thành công",
             backToCheckpoint: "Đang về lại Checkpoint...",
             captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-            version: "Phiên bản v1.9.1.3",
+            version: "Phiên bản v1.9.0.0",
             madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
             autoRedirect: "Tự động chuyển hướng"
         },
@@ -37,7 +134,7 @@
             bypassSuccess: "Bypass successful",
             backToCheckpoint: "Returning to checkpoint...",
             captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-            version: "Version v1.9.1.3",
+            version: "Version v1.9.0.0",
             madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
             autoRedirect: "Auto-redirect"
         }
