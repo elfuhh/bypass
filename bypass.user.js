@@ -1,11 +1,12 @@
 // ==UserScript==
-// @name         Volcano & Work.ink Bypass
+// @name         Workink and Volcano bypass
 // @namespace    http://tampermonkey.net/
-// @version      2.0.0.1
-// @description  bypass Workinks and volcano's key system easily
-// @author       elfuhh and dyrian
+// @version      2.0.0.0
+// @description  bypasss workink and volcano key system
+// @author       Difz25x + Dyrian + elfuhh
 // @match        https://key.volcano.wtf/*
 // @match        https://work.ink/*
+// @match        https://volcano.wtf/instruction
 // @run-at       document-start
 // @grant        unsafeWindow
 // @icon         https://cdn.discordapp.com/icons/1312680907559276576/bedc7397e04d863a9ee5c6087ece8ae8.png?size=80&quality=lossless
