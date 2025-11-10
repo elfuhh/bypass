@@ -1,11 +1,14 @@
 (function() {
     'use strict';
 
+    // safety for environments with/without unsafeWindow
+    const safeWindow = (typeof unsafeWindow !== 'undefined') ? unsafeWindow : window;
+
     // ---------- config ----------
     const host = location.hostname;
     const defaultTime = 8;
     const normalTime = 60;
-    const ver = "2.0.0.1";
+    const ver = "1.0.9.0";
     const debug = true;
 
     // ---------- language & translations ----------
@@ -24,7 +27,7 @@
             bypassSuccess: "Bypass thành công",
             backToCheckpoint: "Đang về lại Checkpoint...",
             captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-            version: "Phiên bản v2.0.0.1",
+            version: "Phiên bản v1.9.0.0",
             madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
             autoRedirect: "Tự động chuyển hướng"
         },
@@ -41,7 +44,7 @@
             bypassSuccess: "Bypass successful",
             backToCheckpoint: "Returning to checkpoint...",
             captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-            version: "Version v2.0.0.1",
+            version: "Version v1.9.0.0",
             madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
             autoRedirect: "Auto-redirect"
         }
@@ -66,7 +69,7 @@
     let autoRedirectEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
     let redirectInProgress = false; // Global redirect flag
 
-    // ---------- GUI: BypassPanel (dyrian + elfuhh code you provided) ----------
+    // ---------- GUI: BypassPanel ----------
     class BypassPanel {
         constructor() {
             this.container = null;
@@ -113,6 +116,7 @@
             });
 
             const style = document.createElement('style');
+            // full CSS (kept from original) - safe to include in JS textContent
             style.textContent = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
@@ -653,10 +657,10 @@ input:checked + .toggle-slider:before {
 </div>
       `;
 
-const wrapper = document.createElement('div');
-wrapper.innerHTML = panelHTML; // panelHTML only contains HTML, no JS
-this.shadow.appendChild(wrapper.firstElementChild); // append safely
-
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = panelHTML;
+            // append the element contained in wrapper; no scripts inside the HTML string
+            this.shadow.appendChild(wrapper.firstElementChild);
 
             // elements
             this.panel = this.shadow.querySelector('.panel');
@@ -897,6 +901,7 @@ this.shadow.appendChild(wrapper.firstElementChild); // append safely
             };
         }
     }
+
 
     // ---------- instantiate GUI ----------
     let panel = null;
