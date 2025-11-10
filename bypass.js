@@ -653,9 +653,10 @@ input:checked + .toggle-slider:before {
 </div>
       `;
 
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = panelHTML;
-            this.shadow.appendChild(wrapper.firstElementChild);
+const wrapper = document.createElement('div');
+wrapper.innerHTML = panelHTML; // panelHTML only contains HTML, no JS
+this.shadow.appendChild(wrapper.firstElementChild); // append safely
+
 
             // elements
             this.panel = this.shadow.querySelector('.panel');
