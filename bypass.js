@@ -1,4 +1,4 @@
-(function() {
+(async () => {
     'use strict';
 
     // safety for environments with/without unsafeWindow
