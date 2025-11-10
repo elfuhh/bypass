@@ -1,10 +1,14 @@
-(() => {
+(function() {
     'use strict';
 
+    // ---------- config ----------
     const host = location.hostname;
+    const defaultTime = 8;
+    const normalTime = 60;
+    const ver = "1.0.9.0";
     const debug = true;
 
-    // ---------- translations used by the GUI ----------
+    // ---------- language & translations ----------
     let currentLanguage = localStorage.getItem('lang') || 'vi';
     const translations = {
         vi: {
@@ -58,11 +62,11 @@
     const STORAGE_KEY_AUTO = 'dyrian_auto_redirect';
 
     // selectedDelay: global variable used by GUI and callback
-    let selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
+    let selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
     let autoRedirectEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
     let redirectInProgress = false; // Global redirect flag
 
-    // ---------- GUI: BypassPanel ----------
+    // ---------- GUI: BypassPanel (dyrian + elfuhh code you provided) ----------
     class BypassPanel {
         constructor() {
             this.container = null;
@@ -587,11 +591,10 @@ input:checked + .toggle-slider:before {
         width: auto;
     }
 }
-            `;
+      `;
             this.shadow.appendChild(style);
 
-            // read persisted delay for UI initialization
-            const lastDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
+            const lastDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
             const autoEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
 
             const panelHTML = `
@@ -648,7 +651,7 @@ input:checked + .toggle-slider:before {
     </div>
   </div>
 </div>
-            `;
+      `;
 
             const wrapper = document.createElement('div');
             wrapper.innerHTML = panelHTML;
@@ -671,11 +674,20 @@ input:checked + .toggle-slider:before {
             this.autoContainer = this.shadow.querySelector('#auto-container');
 
             // attach container to document
-            document.documentElement.appendChild(this.container);
+            try {
+                document.documentElement.appendChild(this.container);
+            } catch (e) {
+                // If append fails (very early), try later
+                setTimeout(() => {
+                    try {
+                        document.documentElement.appendChild(this.container);
+                    } catch (_) {}
+                }, 200);
+            }
 
             // Ensure selectedDelay is in sync with UI immediately
             try {
-                selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0');
+                selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
                 this.slider.value = String(selectedDelay);
                 this.sliderValue.textContent = `${selectedDelay}s`;
             } catch (e) {
@@ -687,6 +699,9 @@ input:checked + .toggle-slider:before {
             this.langBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     currentLanguage = btn.dataset.lang;
+                    try {
+                        localStorage.setItem(STORAGE_KEY_LANG, currentLanguage);
+                    } catch (_) {}
                     this.updateLanguage();
                 });
             });
@@ -718,7 +733,7 @@ input:checked + .toggle-slider:before {
 
             // slider change updates selectedDelay and persists immediately
             this.slider.addEventListener('input', (e) => {
-                selectedDelay = parseInt(e.target.value);
+                selectedDelay = parseInt(e.target.value, 10);
                 this.sliderValue.textContent = `${selectedDelay}s`;
                 try {
                     localStorage.setItem(STORAGE_KEY_DELAY, String(selectedDelay));
@@ -782,8 +797,8 @@ input:checked + .toggle-slider:before {
             } else {
                 message = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
             }
-            this.statusText.textContent = message;
-            this.statusDot.className = `status-dot ${this.currentType}`;
+            if (this.statusText) this.statusText.textContent = message;
+            if (this.statusDot) this.statusDot.className = `status-dot ${this.currentType}`;
         }
 
         showBypassingWorkink() {
@@ -860,19 +875,19 @@ input:checked + .toggle-slider:before {
                 if (this.startBtn) this.startBtn.disabled = true;
             } catch (e) {}
 
-            let remaining = Math.max(0, parseInt(seconds) || 0);
+            let remaining = Math.max(0, parseInt(seconds, 10) || 0);
 
             // Directly set the text without calling show() to avoid conflicts
-            this.statusText.textContent = `Redirecting in ${remaining}s...`;
-            this.statusDot.className = 'status-dot info';
+            if (this.statusText) this.statusText.textContent = `Redirecting in ${remaining}s...`;
+            if (this.statusDot) this.statusDot.className = 'status-dot info';
 
             const interval = setInterval(() => {
                 remaining--;
                 if (remaining > 0) {
-                    this.statusText.textContent = `Redirecting in ${remaining}s...`;
+                    if (this.statusText) this.statusText.textContent = `Redirecting in ${remaining}s...`;
                 } else {
                     clearInterval(interval);
-                    this.statusText.textContent = `Redirecting...`;
+                    if (this.statusText) this.statusText.textContent = `Redirecting...`;
                 }
             }, 1000);
 
@@ -884,77 +899,75 @@ input:checked + .toggle-slider:before {
 
     // ---------- instantiate GUI ----------
     let panel = null;
-    setTimeout(() => {
-        try {
-            panel = new BypassPanel();
-            panel.show('pleaseSolveCaptcha', 'info');
-        } catch (e) {
-            if (debug) console.error('Panel create failed', e);
-        }
-    }, 100);
+    try {
+        panel = new BypassPanel();
+        panel.show('pleaseSolveCaptcha', 'info');
+    } catch (e) {
+        if (debug) console.error('Failed to create panel', e);
+    }
 
-    // ---------- Bypass logic ----------
+    // ---------- bypass logic ----------
+
     if (host.includes("key.volcano.wtf")) handleVolcano();
     else if (host.includes("work.ink")) handleWorkInk();
 
-    // --- VOLCANO (kept mostly unchanged) ---
+    // Handler for VOLCANO
     function handleVolcano() {
         if (panel) panel.show('pleaseSolveCaptcha', 'info');
-        if (debug) console.log('[Debug] Waiting Captcha (Volcano)');
-
         let alreadyDoneContinue = false;
-        let alreadyDoneCopy = false;
 
         function actOnCheckpoint(node) {
-            if (!alreadyDoneContinue) {
-                const buttons = node && node.nodeType === 1 ?
-                    node.matches('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]') ? [node] :
+            if (!node) node = document.documentElement;
+            try {
+                const buttons = (node.nodeType === 1 && node.querySelectorAll) ?
                     node.querySelectorAll('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]') :
                     document.querySelectorAll('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]');
+
                 for (const btn of buttons) {
                     const text = (btn.innerText || btn.value || "").trim().toLowerCase();
-                    if (text.includes("continue") || text.includes("next step")) {
-                        const disabled = btn.disabled || btn.getAttribute("aria-disabled") === "true";
+                    if (text.includes("continue") || text.includes("next step") || text.includes("next")) {
+                        const disabled = btn.disabled || (btn.getAttribute && btn.getAttribute("aria-disabled") === "true");
                         const style = getComputedStyle(btn);
-                        const visible = style.display !== "none" && style.visibility !== "hidden" && btn.offsetParent !== null;
+                        const visible = style && style.display !== "none" && style.visibility !== "hidden" && btn.offsetParent !== null;
                         if (visible && !disabled) {
                             alreadyDoneContinue = true;
                             if (panel) panel.show('captchaSuccess', 'success');
-                            if (debug) console.log('[Debug] Captcha Solved (Volcano)');
-
                             setTimeout(() => {
                                 try {
                                     btn.click();
                                     if (panel) panel.show('redirectingToWork', 'info');
-                                    if (debug) console.log('[Debug] Clicking Continue');
                                 } catch (err) {
-                                    if (debug) console.log('[Debug] No Continue Found', err);
+                                    setTimeout(() => actOnCheckpoint(node), 1000);
                                 }
-                            }, 1500);
+                            }, 300);
                             return true;
                         }
                     }
                 }
-            }
 
-            const copyBtn = node && node.nodeType === 1 ?
-                node.matches("#copy-key-btn, .copy-btn, [aria-label='Copy']") ?
-                node :
-                node.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']") :
-                document.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']");
-            if (copyBtn) {
-                setInterval(() => {
-                    try {
-                        copyBtn.click();
-                        if (debug) console.log('[Debug] Copy button spam click');
-                        if (panel) panel.show('bypassSuccessCopy', 'success');
-                    } catch (err) {
-                        if (debug) console.log('[Debug] No Copy Found', err);
+                // copy button
+                const copyBtn = (node.nodeType === 1 && node.querySelector) ?
+                    node.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']") :
+                    document.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']");
+
+                if (copyBtn) {
+                    if (!copyBtn._difz_copy_interval) {
+                        copyBtn._difz_copy_interval = setInterval(() => {
+                            try {
+                                copyBtn.click();
+                                if (panel) panel.show('bypassSuccessCopy', 'success');
+                            } catch (err) {
+                                try {
+                                    copyBtn.click();
+                                } catch (_) {}
+                            }
+                        }, 500);
                     }
-                }, 500);
-                return true;
+                    return true;
+                }
+            } catch (e) {
+                if (debug) console.error('[Volcano] actOnCheckpoint error', e);
             }
-
             return false;
         }
 
@@ -962,23 +975,10 @@ input:checked + .toggle-slider:before {
             for (const mutation of mutations) {
                 if (mutation.type === 'childList') {
                     for (const node of mutation.addedNodes) {
-                        if (node.nodeType === 1) {
-                            if (actOnCheckpoint(node)) {
-                                if (alreadyDoneCopy) {
-                                    mo.disconnect();
-                                    return;
-                                }
-                            }
-                        }
+                        if (node.nodeType === 1) actOnCheckpoint(node);
                     }
-                }
-                if (mutation.type === 'attributes' && mutation.target.nodeType === 1) {
-                    if (actOnCheckpoint(mutation.target)) {
-                        if (alreadyDoneCopy) {
-                            mo.disconnect();
-                            return;
-                        }
-                    }
+                } else if (mutation.type === 'attributes' && mutation.target && mutation.target.nodeType === 1) {
+                    actOnCheckpoint(mutation.target);
                 }
             }
         });
@@ -989,70 +989,66 @@ input:checked + .toggle-slider:before {
             attributes: true,
             attributeFilter: ['disabled', 'aria-disabled', 'style']
         });
-
-        if (actOnCheckpoint()) {
-            if (alreadyDoneCopy) {
-                mo.disconnect();
-            }
-        }
+        // initial attempt
+        try {
+            actOnCheckpoint(document.documentElement);
+        } catch (e) {}
     }
 
-    // --- WORK.INK (modified to detect GTD button clickability) ---
+    // Handler for WORK.INK
     function handleWorkInk() {
         if (panel) panel.show('pleaseSolveCaptcha', 'info');
 
-        const startTime = Date.now();
-        let sessionControllerA = undefined;
-        let sendMessageA = undefined;
-        let onLinkInfoA = undefined;
-        let linkInfoA = undefined;
-        let onLinkDestinationA = undefined;
+        let sessionController = undefined;
+        let sendMessage = undefined;
+        let LinkInfoFn = undefined;
+        let LinkDestinationFn = undefined;
         let bypassTriggered = false;
         let destinationReceived = false;
+        let destinationProcessed = false;
         let socialCheckInProgress = false;
-        let captchaSolved = false;
+        let destinationURL = null;
 
         const map = {
             onLI: ["onLinkInfo"],
             onLD: ["onLinkDestination"]
         };
+        const types = {
+            an: 'c_announce',
+            mo: 'c_monetization',
+            ss: 'c_social_started',
+            rr: 'c_recaptcha_response',
+            hr: 'c_hcaptcha_response',
+            tr: 'c_turnstile_response',
+            ad: 'c_adblocker_detected',
+            fl: 'c_focus_lost',
+            os: 'c_offers_skipped',
+            ok: 'c_offer_skipped',
+            fo: 'c_focus',
+            wp: 'c_workink_pass_available',
+            wu: 'c_workink_pass_use',
+            pi: 'c_ping',
+            kk: 'c_keyapp_key'
+        };
 
-        function resolveName(obj, candidates) {
-            if (!obj || typeof obj !== "object") {
-                return {
-                    fn: null,
-                    index: -1,
-                    name: null
-                };
-            }
-            for (let i = 0; i < candidates.length; i++) {
-                const name = candidates[i];
-                if (typeof obj[name] === "function") {
-                    return {
+        function getName(obj, candidates = null) {
+            if (!obj || typeof obj !== 'object') return {
+                fn: null,
+                index: -1,
+                name: null
+            };
+            if (candidates) {
+                for (let i = 0; i < candidates.length; i++) {
+                    const name = candidates[i];
+                    if (typeof obj[name] === "function") return {
                         fn: obj[name],
                         index: i,
                         name
                     };
                 }
-            }
-            return {
-                fn: null,
-                index: -1,
-                name: null
-            };
-        }
-
-        function resolveWriteFunction(obj) {
-            if (!obj || typeof obj !== "object") {
-                return {
-                    fn: null,
-                    index: -1,
-                    name: null
-                };
-            }
-            for (let i in obj) {
-                if (typeof obj[i] === "function" && obj[i].length === 2) {
-                    return {
+            } else {
+                for (let i in obj) {
+                    if (typeof obj[i] === "function" && obj[i].length == 2) return {
                         fn: obj[i],
                         name: i
                     };
@@ -1065,433 +1061,253 @@ input:checked + .toggle-slider:before {
             };
         }
 
-        const types = {
-            mo: 'c_monetization',
-            ss: 'c_social_started',
-            tr: 'c_turnstile_response',
-            ad: 'c_adblocker_detected',
-            ping: 'c_ping'
-        };
-
-        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-        // Function to check if GTD button is clickable
-        function isGTDButtonClickable() {
-            const gtdButton = document.querySelector('.button.large.accessBtn.pos-relative');
-            if (!gtdButton) return false;
-
-            const buttonText = gtdButton.textContent.trim();
-            if (!buttonText.includes('Go To Destination')) return false;
-
-            // Check if button is disabled
-            const disabled = gtdButton.disabled ||
-                           gtdButton.getAttribute('disabled') === 'true' ||
-                           gtdButton.getAttribute('aria-disabled') === 'true';
-
-            // Check if button is visible
-            const style = getComputedStyle(gtdButton);
-            const visible = style.display !== 'none' &&
-                          style.visibility !== 'hidden' &&
-                          gtdButton.offsetParent !== null;
-
-            // Check if button has pointer-events enabled
-            const clickable = style.pointerEvents !== 'none';
-
-            const isClickable = !disabled && visible && clickable;
-
-            if (debug && isClickable) {
-                console.log('[Debug] GTD button is clickable!');
-            }
-
-            return isClickable;
-        }
-
-        // Interval to continuously check GTD button
-        const gtdCheckInterval = setInterval(() => {
-            if (captchaSolved || bypassTriggered) {
-                if (debug) console.log('[Debug] Captcha already processed, stopping GTD check');
-                clearInterval(gtdCheckInterval);
-                return;
-            }
-
-            if (isGTDButtonClickable()) {
-                if (debug) console.log('[Debug] GTD button detected as clickable - captcha solved!');
-                captchaSolved = true;
-                clearInterval(gtdCheckInterval);
-
-                if (panel) panel.show('captchaSuccess', 'success');
-
-                // Trigger bypass after detecting clickable button
-                setTimeout(() => {
-                    triggerBypass('gtd-button-clickable');
-                }, 500);
-            }
-        }, 500); // Check every 500ms
-
-        async function checkAndHandleSocials() {
-            if (!linkInfoA) {
-                if (debug) console.log('[Debug] checkAndHandleSocials: no linkInfoA yet');
-                return;
-            }
-            if (socialCheckInProgress) {
-                if (debug) console.log('[Debug] Social check already running');
-                return;
-            }
-
-            let socials = Array.isArray(linkInfoA.socials) ? linkInfoA.socials.slice() : [];
-            if (debug) console.log('[Debug] checkAndHandleSocials: found socials count', socials.length);
-
-            if (socials.length > 1) {
-                socialCheckInProgress = true;
-                if (panel) panel.show('Processing Socials', `Found ${socials.length} socials, spoofing with delays...`);
-                if (debug) console.log('[Debug] Spoofing socials loop start');
-
-                for (let i = 0; i < socials.length; i++) {
-                    const soc = socials[i];
-                    try {
-                        if (sendMessageA && sessionControllerA) {
-                            sendMessageA.call(sessionControllerA, types.ss, {
-                                url: soc.url
-                            });
-                            if (debug) console.log(`[Debug] Spoofed social [${i+1}/${socials.length}]:`, soc.url);
-                            if (panel) panel.show('Processing Socials', `Spoofed ${i+1}/${socials.length} socials...`);
-                        } else {
-                            if (debug) console.warn('[Debug] sendMessageA not ready; skipping spoof for', soc.url);
-                        }
-                    } catch (e) {
-                        if (debug) console.error('[Debug] Error spoofing social', soc.url, e);
-                    }
-                    if (i < socials.length - 1) await sleep(1000);
-                }
-
-                if (debug) console.log('[Debug] Completed social spoofing. Waiting 2000ms before reload...');
-                await sleep(2000);
-
-                try {
-                    sessionStorage.setItem('dyrian_last_spoof', Date.now().toString());
-                } catch (e) {}
-                if (panel) panel.show('reloading', 'info');
-                window.location.reload();
-                return;
-            } else {
-                socialCheckInProgress = false;
-                if (debug) console.log('[Debug] Socials <=1: returning to normal captcha UI; waiting for user solve');
-                if (panel) panel.show('pleaseSolveCaptcha', 'info');
-                return;
-            }
-        }
-
         function triggerBypass(reason) {
-            if (bypassTriggered) {
-                if (debug) console.log('[Debug] triggerBypass skipped (already triggered)');
-                return;
-            }
+            if (bypassTriggered) return;
             bypassTriggered = true;
-            if (debug) console.log('[Debug] triggerBypass via:', reason);
-            if (panel) panel.showBypassingWorkink();
+            if (debug) console.log('[Debug] trigger Bypass via:', reason);
+            if (panel) panel.show('captchaSuccessBypassing', 'success');
 
-            let retryCount = 0;
-            async function keepSpoofing() {
-                if (destinationReceived) {
-                    if (debug) console.log('[Debug] destination received: stopping spoof loop after', retryCount, 'attempts');
-                    return;
-                }
-                retryCount++;
-                if (debug) console.log('[Debug] keepSpoofing attempt', retryCount);
-                try {
-                    if (linkInfoA && sendMessageA && sessionControllerA) {
-                        const socials = linkInfoA.socials || [];
-                        for (let i = 0; i < socials.length; i++) {
-                            try {
-                                sendMessageA.call(sessionControllerA, types.ss, {
-                                    url: socials[i].url
-                                });
-                            } catch (e) {}
-                        }
-                    }
-                    spoofWorkink();
-                } catch (e) {
-                    if (debug) console.error('[Debug] keepSpoofing error', e);
-                }
+            function keepSpoofing() {
+                if (destinationReceived) return;
+                spoofSocials();
+                spoofWorkink();
                 setTimeout(keepSpoofing, 3000);
             }
             keepSpoofing();
         }
 
-        function spoofWorkink() {
-            if (!linkInfoA) {
-                if (debug) console.log('[Debug] spoofWorkink skipped: no linkInfoA');
-                return;
+        async function spoofSocials() {
+            if (!LinkInfoFn || socialCheckInProgress) return;
+            const socials = (LinkInfoFn.socials || LinkInfoFn?.socials) || [];
+            if (socials.length > 1) {
+                socialCheckInProgress = true;
+                if (panel) panel.show('socialsdetected', 'info');
+                for (let i = 0; i < socials.length; i++) {
+                    const soc = socials[i];
+                    try {
+                        if (sendMessage) {
+                            sendMessage.call(sessionController, types.ss, {
+                                url: soc.url
+                            });
+                            if (panel) panel.show('socialsdetected', 'warning');
+                        }
+                    } catch (e) {
+                        if (debug) console.error('[Debug] Error spoofing social', e);
+                    }
+                    if (i < socials.length - 1) await new Promise(r => setTimeout(r, 2000));
+                }
+                setTimeout(() => {
+                    if (panel) panel.show('reloading', 'info');
+                    window.location.reload();
+                }, 4000);
+            } else {
+                triggerBypass('social-check-complete');
             }
-            if (debug) console.log('[Debug] spoofWorkink running, linkInfoA present');
+        }
 
-            const socials = linkInfoA.socials || [];
+        function spoofWorkink() {
+            if (!LinkInfoFn) return;
+            const socials = LinkInfoFn.socials || [];
             for (let i = 0; i < socials.length; i++) {
                 const soc = socials[i];
                 try {
-                    if (sendMessageA && sessionControllerA) {
-                        sendMessageA.call(sessionControllerA, types.ss, {
-                            url: soc.url
-                        });
-                        if (debug) console.log(`[Debug] Faked social [${i+1}/${socials.length}]:`, soc.url);
-                    }
+                    if (sendMessage) sendMessage.call(this, types.ss, {
+                        url: soc.url
+                    });
                 } catch (e) {
-                    if (debug) console.error('[Debug] Error faking social', soc.url, e);
+                    if (debug) console.error(e);
                 }
             }
 
-            const monetizations = sessionControllerA?.monetizations || [];
-            if (debug) console.log('[Debug] Total monetizations to fake:', monetizations.length);
-
+            const monetizations = sessionController?.monetizations || [];
             for (let i = 0; i < monetizations.length; i++) {
                 const monetization = monetizations[i];
-                const monetizationId = monetization.id;
-                const monetizationSendMessage = monetization.sendMessage;
                 try {
+                    const monetizationId = monetization.id;
+                    const monetizationSendMessage = monetization.sendMessage;
                     switch (monetizationId) {
                         case 22:
-                            monetizationSendMessage.call(monetization, {
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
                                 event: 'read'
                             });
                             break;
                         case 25:
-                            monetizationSendMessage.call(monetization, {
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
                                 event: 'start'
                             });
-                            monetizationSendMessage.call(monetization, {
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
                                 event: 'installClicked'
                             });
-                            fetch('/_api/v2/affiliate/operaGX', {
-                                method: 'GET',
-                                mode: 'no-cors'
-                            }).catch(() => {});
+                            try {
+                                fetch('/_api/v2/affiliate/operaGX', {
+                                    method: 'GET',
+                                    mode: 'no-cors'
+                                });
+                            } catch (_) {}
                             setTimeout(() => {
-                                fetch('https://work.ink/_api/v2/callback/operaGX', {
-                                    method: 'POST',
-                                    mode: 'no-cors',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        noteligible: true
-                                    })
-                                }).catch(() => {});
+                                try {
+                                    fetch('https://work.ink/_api/v2/callback/operaGX', {
+                                        method: 'POST',
+                                        mode: 'no-cors',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            'noteligible': true
+                                        })
+                                    });
+                                } catch (_) {}
                             }, 5000);
                             break;
                         case 34:
-                            monetizationSendMessage.call(monetization, {
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
                                 event: 'start'
                             });
-                            monetizationSendMessage.call(monetization, {
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
                                 event: 'installClicked'
                             });
                             break;
                         case 71:
-                            monetizationSendMessage.call(monetization, {
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
                                 event: 'start'
                             });
-                            monetizationSendMessage.call(monetization, {
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
                                 event: 'installed'
                             });
                             break;
                         case 45:
-                            monetizationSendMessage.call(monetization, {
-                                event: 'installed'
-                            });
-                            break;
                         case 57:
-                            monetizationSendMessage.call(monetization, {
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
                                 event: 'installed'
                             });
                             break;
                         default:
-                            if (debug) console.log('[Debug] Unknown monetization id', monetizationId);
                             break;
                     }
                 } catch (e) {
-                    if (debug) console.error('[Debug] Error faking monetization', monetization, e);
+                    if (debug) console.error('[Debug] Error faking monetization:', e);
                 }
             }
-            if (debug) console.log('[Debug] spoofWorkink completed');
         }
 
-        function createSendMessageProxy() {
+        function createSendMessage() {
             return function(...args) {
-                const pt = args[0];
-                const pd = args[1];
-
-                if (pt !== types.ping) {
-                    if (debug) console.log('[Debug] Message sent:', pt, pd);
+                const packet_type = args[0];
+                if (packet_type !== types.pi) {
+                    if (debug) console.log('[Debug] Message sent:', packet_type, args[1]);
                 }
-
-                if (pt === types.ad) {
-                    if (debug) console.log('[Debug] Blocking adblocker message');
-                    return;
-                }
-
-                if (pt === types.tr) {
-                    if (debug) console.log('[Debug] Captcha/turnstile response detected -> user solved captcha');
-                    captchaSolved = true;
-                    const socials = linkInfoA?.socials || [];
-                    if (socials.length <= 1) {
-                        triggerBypass('tr');
-                    } else {
-                        if (debug) console.log('[Debug] Captcha solved but socials >1; social loop should handle removing them first.');
-                    }
-                }
-
-                return sendMessageA ? sendMessageA.apply(this, args) : undefined;
+                if (packet_type === types.tr) triggerBypass('tr');
+                return sendMessage ? sendMessage.apply(this, args) : undefined;
             };
         }
 
-        function createLinkInfoProxy() {
-            return function(...args) {
-                const info = args[0];
-                linkInfoA = info;
-                if (debug) console.log('[Debug] Link info arrived:', info);
-                try {
-                    checkAndHandleSocials();
-                } catch (e) {
-                    if (debug) console.error(e);
-                }
-                try {
-                    spoofWorkink();
-                } catch (e) {
-                    if (debug) console.error(e);
-                }
+        function createLinkInfo() {
+            return async function(...args) {
+                const [info] = args;
+                LinkInfoFn = info;
                 try {
                     Object.defineProperty(info, 'isAdblockEnabled', {
                         get: () => false,
                         set: () => {},
-                        configurable: false,
-                        enumerable: true
+                        configurable: true
                     });
-                    if (debug) console.log('[Debug] Adblock disabled in linkInfo');
-                } catch (e) {
-                    if (debug) console.warn('[Debug] Define Property failed:', e);
-                }
-                return onLinkInfoA ? onLinkInfoA.apply(this, args) : undefined;
+                } catch (e) {}
+                spoofWorkink();
+                return LinkInfoFn ? LinkInfoFn.apply(this, args) : undefined;
             };
         }
 
         function redirect(url) {
-            if (debug) console.log('[Debug] Redirecting to:', url);
+            if (panel) panel.show('backToCheckpoint', 'info');
             window.location.href = url;
         }
 
-        function createDestinationProxy() {
-            return function(...args) {
-                if (redirectInProgress || destinationReceived) {
-                    if (debug) console.log('[Debug] createDestinationProxy: redirect already in progress or destination already received, ignoring');
-                    return onLinkDestinationA ? onLinkDestinationA.apply(this, args) : undefined;
+        function startCountdown(url, waitLeft) {
+            if (panel) panel.show('bypassSuccess', 'warning');
+            let left = parseInt(waitLeft, 10) || 0;
+            const iv = setInterval(() => {
+                left -= 1;
+                if (left > 0) {
+                    if (panel) panel.show('bypassSuccess', 'warning');
+                } else {
+                    clearInterval(iv);
+                    redirect(url);
                 }
+            }, 1000);
+        }
 
-                const data = args[0];
-                const secondsPassed = (Date.now() - startTime) / 1000;
+        function createLinkDestination() {
+            return async function(...args) {
+                const [data] = args;
                 destinationReceived = true;
+                destinationURL = data?.url || null;
+                if (!destinationProcessed) {
+                    destinationProcessed = true;
+                    if (debug) console.log("[Debug] Destination data: ", data);
+                    // Show UI slider and allow user to start / auto redirect
+                    if (panel) {
+                        panel.showCaptchaComplete();
+                        // set GUI callback to trigger redirect with chosen delay
+                        panel.setCallback((delay) => {
+                            // delay is in seconds
+                            if (!destinationURL) {
+                                if (debug) console.warn('No destination URL to redirect to');
+                                return;
+                            }
+                            // update global selectedDelay so UI matches
+                            selectedDelay = parseInt(delay, 10) || 0;
+                            try {
+                                localStorage.setItem(STORAGE_KEY_DELAY, String(selectedDelay));
+                            } catch (_) {}
 
-                if (debug) console.log('[Debug] Destination data:', data.url);
-
-                if (panel) {
-                    panel.show('bypassSuccess', 'success');
-
-                    panel.setCallback && panel.setCallback((delay) => {
-                        if (debug) console.log('[Debug] Callback triggered with delay:', delay);
-                        if (delay === 0) {
-                            if (debug) console.log('[Debug] Delay is 0, redirecting immediately');
-                            panel.show('redirectingToWork', 'info');
-                            redirect(data.url);
-                        } else {
-                            if (debug) console.log('[Debug] Starting countdown with delay:', delay);
-                            panel.startCountdown && panel.startCountdown(delay);
+                            // let GUI show countdown and then perform the redirect
+                            if (panel) {
+                                panel.startCountdown(selectedDelay);
+                            }
                             setTimeout(() => {
-                                if (debug) console.log('[Debug] Countdown finished, redirecting to:', data.url);
-                                redirect(data.url);
-                            }, (delay + 1) * 1000);
-                        }
-                    });
-
-                    if (debug) console.log('[Debug] Calling showCaptchaComplete');
-                    panel.showCaptchaComplete && panel.showCaptchaComplete();
+                                window.location.href = destinationURL;
+                            }, selectedDelay * 1000);
+                        });
+                    }
                 }
-
-                return onLinkDestinationA ? onLinkDestinationA.apply(this, args) : undefined;
+                return LinkDestinationFn ? LinkDestinationFn.apply(this, args) : undefined;
             };
         }
 
         function setupProxies() {
-            const send = resolveWriteFunction(sessionControllerA);
-            const info = resolveName(sessionControllerA, map.onLI);
-            const dest = resolveName(sessionControllerA, map.onLD);
-
-            if (!send.fn || !info.fn || !dest.fn) {
-                if (debug) console.log('[Debug] Could not resolve send/info/dest on controller yet', send, info, dest);
-                return;
-            }
-
-            sendMessageA = send.fn;
-            onLinkInfoA = info.fn;
-            onLinkDestinationA = dest.fn;
-
-            const sendMessageProxy = createSendMessageProxy();
-            const onLinkInfoProxy = createLinkInfoProxy();
-            const onDestinationProxy = createDestinationProxy();
-
+            const send = getName(sessionController);
+            const info = getName(sessionController, map.onLI);
+            const dest = getName(sessionController, map.onLD);
+            if (!send.fn || !info.fn || !dest.fn) return;
+            sendMessage = send.fn;
+            LinkInfoFn = info.fn;
+            LinkDestinationFn = dest.fn;
             try {
-                Object.defineProperty(sessionControllerA, send.name, {
-                    get() {
-                        return sendMessageProxy
-                    },
-                    set(v) {
-                        sendMessageA = v
-                    },
-                    configurable: false,
-                    enumerable: true
+                Object.defineProperty(sessionController, send.name, {
+                    get: createSendMessage,
+                    set: v => (sendMessage = v),
+                    configurable: true
                 });
-
-                Object.defineProperty(sessionControllerA, info.name, {
-                    get() {
-                        return onLinkInfoProxy
-                    },
-                    set(v) {
-                        onLinkInfoA = v
-                    },
-                    configurable: false,
-                    enumerable: true
+                Object.defineProperty(sessionController, info.name, {
+                    get: createLinkInfo,
+                    set: v => (LinkInfoFn = v),
+                    configurable: true
                 });
-
-                Object.defineProperty(sessionControllerA, dest.name, {
-                    get() {
-                        return onDestinationProxy
-                    },
-                    set(v) {
-                        onLinkDestinationA = v
-                    },
-                    configurable: false,
-                    enumerable: true
+                Object.defineProperty(sessionController, dest.name, {
+                    get: createLinkDestination,
+                    set: v => (LinkDestinationFn = v),
+                    configurable: true
                 });
-
-                if (debug) console.log(`[Debug] setupProxies: installed ${send.name}, ${info.name}, ${dest.name}`);
-            } catch (e) {
-                if (debug) console.warn('[Debug] Failed to define proxy properties', e);
-            }
+            } catch (e) {}
         }
 
-        function checkController(target, prop, value, receiver) {
-            if (debug) console.log('[Debug] Checking prop:', prop, typeof value);
-            if (value &&
-                typeof value === 'object' &&
-                resolveWriteFunction(value).fn &&
-                resolveName(value, map.onLI).fn &&
-                resolveName(value, map.onLD).fn &&
-                !sessionControllerA) {
-                sessionControllerA = value;
-                if (debug) console.log('[Debug] Controller detected:', sessionControllerA);
+        function checkController(target, prop, value) {
+            if (value && typeof value === 'object' && getName(value).fn && getName(value, map.onLI).fn && getName(value, map.onLD).fn && !sessionController) {
+                sessionController = value;
                 setupProxies();
-            } else {
-                if (debug) console.log('[Debug] checkController: No controller found for prop:', prop);
+                if (debug) console.log('[Debug] Controller detected:', sessionController);
             }
-            return Reflect.set(target, prop, value, receiver);
+            return Reflect.set(target, prop, value);
         }
 
         function createComponentProxy(comp) {
@@ -1508,174 +1324,118 @@ input:checked + .toggle-slider:before {
             });
         }
 
-        function creaNodeResultProxy(result) {
-            return new Proxy(result, {
-                get: (target, prop, receiver) => {
-                    if (prop === 'component') {
-                        return createComponentProxy(target.component);
-                    }
-                    return Reflect.get(target, prop, receiver);
-                }
-            });
-        }
-
-        function createNodeProxy(oldNode) {
+        function createNodeProxy(node) {
             return async (...args) => {
-                const result = await oldNode(...args);
-                return creaNodeResultProxy(result);
-            }
+                const result = await node(...args);
+                return new Proxy(result, {
+                    get: (t, p) => p === 'component' ? createComponentProxy(t.component) : Reflect.get(t, p)
+                });
+            };
         }
 
         function createKitProxy(kit) {
             if (!kit?.start) return [false, kit];
-
-            return [
-                true,
-                new Proxy(kit, {
-                    get(target, prop, receiver) {
-                        if (prop === 'start') {
-                            return function(...args) {
-                                const appModule = args[0];
-                                const options = args[2];
-
-                                if (
-                                    typeof appModule === 'object' &&
-                                    typeof appModule.nodes === 'object' &&
-                                    typeof options === 'object' &&
-                                    typeof options.node_ids === 'object'
-                                ) {
-                                    const nodeIndex = options.node_ids[1];
-                                    const oldNode = appModule.nodes[nodeIndex];
-                                    appModule.nodes[nodeIndex] = createNodeProxy(oldNode);
+            return [true, new Proxy(kit, {
+                get(target, prop) {
+                    if (prop === 'start') {
+                        return function(...args) {
+                            try {
+                                const [nodes, , opts] = args;
+                                if (nodes?.nodes && opts?.node_ids) {
+                                    const idx = opts.node_ids[1];
+                                    if (nodes.nodes[idx]) {
+                                        nodes.nodes[idx] = createNodeProxy(nodes.nodes[idx]);
+                                    }
                                 }
-
-                                if (debug) console.log('[Debug] kit.start intercepted!', options);
-                                return kit.start.apply(this, args);
-                            };
-                        }
-                        return Reflect.get(target, prop, receiver);
+                            } catch (_) {}
+                            return kit.start.apply(this, args);
+                        };
                     }
-                })
-            ];
+                    return Reflect.get(target, prop);
+                }
+            })];
         }
 
         function setupInterception() {
-            const origPromiseAll = Promise.all;
-            let intercepted = false;
-
-            Promise.all = async function(promises) {
-                const result = origPromiseAll.call(this, promises);
-                if (!intercepted) {
-                    intercepted = true;
-                    return await new Promise((resolve) => {
-                        result.then(([kit, app, ...args]) => {
-                            if (debug) console.log('[Debug]: Set up Interception!');
-
-                            const [success, created] = createKitProxy(kit);
-                            if (success) {
-                                Promise.all = origPromiseAll;
-                                if (debug) console.log('[Debug]: Kit ready', created, app);
-                            }
-                            resolve([created, app, ...args]);
-                        }).catch(() => {
-                            resolve(result);
+            try {
+                const origPromiseAll = unsafeWindow.Promise.all;
+                let intercepted = false;
+                unsafeWindow.Promise.all = async function(promises) {
+                    const result = origPromiseAll.call(this, promises);
+                    if (!intercepted) {
+                        intercepted = true;
+                        return await new unsafeWindow.Promise((resolve) => {
+                            result.then(([kit, app, ...args]) => {
+                                const [success, created] = createKitProxy(kit);
+                                if (success) {
+                                    unsafeWindow.Promise.all = origPromiseAll;
+                                }
+                                resolve([created, app, ...args]);
+                            }).catch(() => resolve([kit, app, ...args]));
                         });
-                    });
-                }
-                return await result;
-            };
+                    }
+                    return await result;
+                };
+            } catch (e) {
+                if (debug) console.warn('setupInterception failed', e);
+            }
         }
 
-        let controllerCheckInterval = setInterval(() => {
-            if (sessionControllerA) {
-                if (debug) console.log('[Debug] Controller detected early, stopping interval check');
-                clearInterval(controllerCheckInterval);
-            }
-        }, 500);
+        try {
+            window.googletag = {
+                cmd: [],
+                _loaded_: true
+            };
+        } catch (_) {}
 
-        setTimeout(() => {
-            if (controllerCheckInterval) {
-                clearInterval(controllerCheckInterval);
-                if (debug) console.log('[Debug] Controller check interval stopped after timeout');
-            }
-        }, 30000);
-
-        window.googletag = {
-            cmd: [],
-            _loaded_: true
-        };
-
-        const blockedClasses = [
-            "adsbygoogle",
-            "adsense-wrapper",
-            "inline-ad",
-            "gpt-billboard-container"
-        ];
-
-        const blockedIds = [
-            "billboard-1",
-            "billboard-2",
-            "billboard-3",
-            "sidebar-ad-1",
-            "skyscraper-ad-1"
-        ];
+        const blockedClasses = ["adsbygoogle", "adsense-wrapper", "inline-ad", "gpt-billboard-container", "[&:not(:first-child)]:mt-12", "lg:block"];
+        const blockedIds = ["billboard-1", "billboard-2", "billboard-3", "sidebar-ad-1", "skyscraper-ad-1"];
 
         setupInterception();
-
-        const periodicChecker = setInterval(() => {
-            try {
-                if (linkInfoA && !bypassTriggered) {
-                    checkAndHandleSocials();
-                }
-            } catch (e) {
-                if (debug) console.error('[Debug] periodic check error', e);
-            }
-        }, 2500);
 
         const ob = new MutationObserver(mutations => {
             for (const m of mutations) {
                 for (const node of m.addedNodes) {
                     if (node.nodeType === 1) {
-                        blockedClasses.forEach((cls) => {
-                            try {
+                        try {
+                            blockedClasses.forEach((cls) => {
                                 if (node.classList?.contains(cls)) {
                                     node.remove();
-                                    if (debug) console.log('[Debug]: Removed ad by class:', cls, node);
+                                    if (debug) console.log('[Debug]: Removed ad by class:', cls);
                                 }
-                            } catch (e) {}
-                            try {
-                                node.querySelectorAll?.(`.${cls}`).forEach((el) => {
+                                node.querySelectorAll?.(`.${CSS.escape(cls)}`).forEach((el) => {
                                     el.remove();
-                                    if (debug) console.log('[Debug]: Removed nested ad by class:', cls, el);
+                                    if (debug) console.log('[Debug]: Removed nested ad by class:', cls);
                                 });
-                            } catch (e) {}
-                        });
-
-                        blockedIds.forEach((id) => {
-                            try {
+                            });
+                            blockedIds.forEach((id) => {
                                 if (node.id === id) {
                                     node.remove();
-                                    if (debug) console.log('[Debug]: Removed ad by id:', id, node);
+                                    if (debug) console.log('[Debug]: Removed ad by id:', id);
                                 }
-                            } catch (e) {}
-                            try {
-                                node.querySelectorAll?.(`#${id}`).forEach((el) => {
+                                node.querySelectorAll?.(`#${CSS.escape(id)}`).forEach((el) => {
                                     el.remove();
-                                    if (debug) console.log('[Debug]: Removed nested ad by id:', id, el);
+                                    if (debug) console.log('[Debug]: Removed nested ad by id:', id);
                                 });
-                            } catch (e) {}
-                        });
+                            });
+                        } catch (e) {
+                            /* ignore CSS.escape errors in old browsers */ }
 
-                        if (node.matches && node.matches('.button.large.accessBtn.pos-relative') && node.textContent.includes('Go To Destination')) {
-                            if (debug) console.log('[Debug] GTD button detected in DOM');
-                        }
+                        try {
+                            // detect GTD / big button
+                            if (node.matches && node.matches('button.large') && node.textContent && node.textContent.includes('Go To Destination')) {
+                                triggerBypass('gtd');
+                            }
+                        } catch (_) {}
                     }
                 }
             }
         });
+
         ob.observe(document.documentElement, {
             childList: true,
-            subtree: true
+            subtree: true,
+            attributes: false
         });
     }
 
