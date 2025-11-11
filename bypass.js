@@ -8,7 +8,7 @@
         const host = location.hostname;
         const defaultTime = 8;
         const normalTime = 60;
-        const ver = "2.5";
+        const ver = "3.0.0.0";
         const debug = true;
 
         // ---------- language & translations ----------
@@ -27,7 +27,7 @@
                 bypassSuccess: "Bypass thành công",
                 backToCheckpoint: "Đang về lại Checkpoint...",
                 captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-                version: "Phiên bản 2.5",
+                version: "Phiên bản 3.0.0.0",
                 madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
                 autoRedirect: "Tự động chuyển hướng"
             },
@@ -44,7 +44,7 @@
                 bypassSuccess: "Bypass successful",
                 backToCheckpoint: "Returning to checkpoint...",
                 captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-                version: "Version 2.5",
+                version: "Version 3.0.0.0",
                 madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
                 autoRedirect: "Auto-redirect"
             }
@@ -903,89 +903,69 @@ input:checked + .toggle-slider:before {
         }
 
 
-        // ---------- instantiate GUI ----------
-        let panel = null;
-        try {
-            panel = new BypassPanel();
-            panel.show('pleaseSolveCaptcha', 'info');
-        } catch (e) {
-            if (debug) console.error('Failed to create panel', e);
-        }
+// ---------- instantiate GUI ----------
+let panel = null;
+try {
+    panel = new BypassPanel();
+    panel.show('pleaseSolveCaptcha', 'info');
+} catch (e) {
+    if (debug) console.error('Failed to create panel', e);
+}
 
-        // ---------- bypass logic ----------
+// ---------- bypass logic ----------
 
-        if (host.includes("key.volcano.wtf")) handleVolcano();
-        else if (host.includes("work.ink")) handleWorkInk();
+if (host.includes("key.volcano.wtf")) handleVolcano();
+else if (host.includes("work.ink")) handleWorkInk();
 
 // ---------- Full Volcano handler with GUI messages ----------
 function handleVolcano() {
     if (panel) panel.show('pleaseSolveCaptcha', 'info', 'Please solve the captcha');
 
-    let alreadyDoneContinue = false;
     let captchaSolved = false;
+    let alreadyClickedWorkInk = false;
     let copyInterval = null;
-    let pollIv = null;
+    let pollInterval = null;
     let attemptsMap = new WeakMap();
     window._volcano_last_href = window._volcano_last_href || location.href;
 
     // ---------- helpers ----------
     function nodeTextIncludes(node, needle) {
-        try {
-            if (!node) return false;
-            const txt = (node.innerText || node.textContent || '').trim().toLowerCase();
-            return txt.includes(needle.toLowerCase());
-        } catch (e) { return false; }
+        if (!node) return false;
+        const txt = (node.innerText || node.textContent || '').trim().toLowerCase();
+        return txt.includes(needle.toLowerCase());
     }
 
     function findContinueButtons(root = document) {
         const candidates = Array.from(root.querySelectorAll('button, input[type=submit], a, [role="button"]'));
         const patterns = [/continue/i, /next/i, /go to destination/i, /visit/i, /claim/i, /submit/i];
         return candidates.filter(btn => {
-            try {
-                const text = (btn.innerText || btn.value || btn.getAttribute('aria-label') || '').trim();
-                if (!text) return false;
-                return patterns.some(rx => rx.test(text));
-            } catch (e) { return false; }
+            const text = (btn.innerText || btn.value || btn.getAttribute('aria-label') || '').trim();
+            return text && patterns.some(rx => rx.test(text));
         });
     }
 
     function isVisibleAndEnabled(el) {
-        try {
-            if (!el) return false;
-            const style = getComputedStyle(el);
-            const visible = style && style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
-            const disabled = el.disabled || (el.getAttribute && el.getAttribute('aria-disabled') === 'true');
-            return visible && !disabled;
-        } catch (e) { return false; }
+        if (!el) return false;
+        const style = getComputedStyle(el);
+        const visible = style && style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
+        const disabled = el.disabled || (el.getAttribute && el.getAttribute('aria-disabled') === 'true');
+        return visible && !disabled;
     }
 
     // ---------- captcha detection ----------
     function isCaptchaSolved() {
         try {
-            // Check for Volcano-specific success indicators
+            // Volcano-specific success indicators
             const successText = document.querySelector('#success-text');
             const successIcon = document.querySelector('#success-i');
-            if (successText && successText.textContent.includes('Success!') && successIcon && successIcon.style.display === 'block') {
-                if (debug) console.log('[Volcano] Captcha solved: Success text and icon detected');
-                return true;
-            }
+            if (successText && successText.textContent.includes('Success!') && successIcon && successIcon.style.display === 'block') return true;
 
             const token = document.querySelector('textarea[name="g-recaptcha-response"], input[name="cf_captcha_kind"], input[name="cf_captcha_response"], input[name="cf_challenge_state"]');
             if (token && token.value && token.value.trim().length > 0) return true;
 
-            const successSelectors = ['.captcha-success', '.challenge-complete', '.cf-success', '.success-message', '#captcha-success'];
-            for (const sel of successSelectors) {
-                const el = document.querySelector(sel);
-                if (el && nodeTextIncludes(el, 'success')) return true;
-            }
-
-            const xpath = "//text()[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'success!')]/parent::*";
-            const res = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-            if (res && res.singleNodeValue) return true;
-
-            const cont = findContinueButtons(document).find(isVisibleAndEnabled);
-            if (cont) return true;
-        } catch (e) { if (debug) console.error('[Volcano] isCaptchaSolved error', e); }
+            const contBtn = document.querySelector('#primaryButton');
+            if (contBtn && isVisibleAndEnabled(contBtn)) return true;
+        } catch (e) {}
         return false;
     }
 
@@ -998,8 +978,8 @@ function handleVolcano() {
 
         try {
             if (!isVisibleAndEnabled(btn)) return false;
-
-            if (panel) panel.show('clickingButton', 'info', `Clicking ${label}...`);
+            await new Promise(r => setTimeout(r, 2000)); // <-- 2-second delay before click
+            if (panel) panel.show('redirectingToWork', 'info', `Redirecting to Work.ink...`);
             btn.click();
             await new Promise(r => setTimeout(r, 600));
 
@@ -1012,58 +992,45 @@ function handleVolcano() {
                 if (panel) panel.show('clickSuccess', 'success', `${label} clicked successfully`);
                 return true;
             }
-        } catch (e) { if (debug) console.error('[Volcano] tryClickButton error', e); }
-        return false;
-    }
-
-    async function clickContinueRobust() {
-        const buttons = findContinueButtons(document);
-        if (!buttons.length) return false;
-        for (const btn of buttons) {
-            for (let i = 0; i < 6; i++) {
-                const ok = await tryClickButton(btn, 6, 'Continue button');
-                if (ok) return true;
-                await new Promise(r => setTimeout(r, 400));
-            }
-        }
+        } catch (e) { console.error('tryClickButton error', e); }
         return false;
     }
 
     async function clickWorkInkButtonRobust() {
-        try {
-            const btn = document.querySelector('#primaryButton');
-            if (!btn || !isVisibleAndEnabled(btn)) return false;
+        if (alreadyClickedWorkInk) return true;
 
-            for (let i = 0; i < 6; i++) {
-                if (panel) panel.show('Redirecting to the Workink...', 'info', 'clickingWorkInk');
-                btn.click();
-                await new Promise(r => setTimeout(r, 600));
-                if (!isVisibleAndEnabled(btn) || location.href !== window._volcano_last_href) {
-                    window._volcano_last_href = location.href;
-                    if (panel) panel.show('redirectingToWork', 'success', 'Redirecting to Work.Ink!');
+        let success = false;
+        let attempts = 0;
+        const maxAttempts = 60;
+        const delay = 500;
+
+        while (!success && attempts < maxAttempts) {
+            attempts++;
+            const btn = document.querySelector('#primaryButton');
+            if (btn && isVisibleAndEnabled(btn)) {
+                success = await tryClickButton(btn, 6, 'Continue with Work.Ink');
+                if (success) {
+                    alreadyClickedWorkInk = true;
                     return true;
                 }
-                await new Promise(r => setTimeout(r, 400));
             }
-        } catch (e) { if (debug) console.error('[Volcano] clickWorkInkButtonRobust error', e); }
+            await new Promise(r => setTimeout(r, delay));
+        }
+
+        if (!success && panel) panel.show('clickWorkInkFailed', 'error', 'Work.ink button not found.');
         return false;
     }
 
     function startCopyPolling(node) {
         try {
-            const copyBtn = (node && node.querySelector) ?
-                node.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']") :
-                document.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']");
-
+            const copyBtn = (node?.querySelector) ? node.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']") : document.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']");
             if (copyBtn && !copyBtn._difz_copy_interval) {
                 copyBtn._difz_copy_interval = setInterval(() => {
                     try { copyBtn.click(); if (panel) panel.show('bypassSuccessCopy', 'success', 'Copied key successfully'); } catch (_) {}
                 }, 500);
                 copyInterval = copyBtn._difz_copy_interval;
-                return true;
             }
-        } catch (e) { if (debug) console.error('[Volcano] startCopyPolling error', e); }
-        return false;
+        } catch (e) { console.error('startCopyPolling error', e); }
     }
 
     // ---------- on captcha solved ----------
@@ -1071,42 +1038,31 @@ function handleVolcano() {
         if (captchaSolved) return;
         captchaSolved = true;
         if (panel) panel.show('captchaSuccess', 'success', 'Captcha solved successfully!');
-
         try {
-            const okContinue = await clickContinueRobust();
-            const okWorkInk = await clickWorkInkButtonRobust();
-            if (okWorkInk) alreadyDoneContinue = true;
-        } catch (e) { if (debug) console.error('[Volcano] onCaptchaDetected click error', e); }
+            await clickWorkInkButtonRobust();
+        } catch (e) { console.error('onCaptchaDetected click error', e); }
 
         try { mo.disconnect(); } catch (_) {}
-        try { window.removeEventListener('message', messageListener); } catch (_) {}
-        if (pollIv) { clearInterval(pollIv); pollIv = null; }
+        window.removeEventListener('message', messageListener);
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        if (copyInterval) { clearInterval(copyInterval); copyInterval = null; }
     }
 
     // ---------- observers & listeners ----------
     const mo = new MutationObserver((mutations) => {
-        try {
-            if (captchaSolved) return;
+        if (captchaSolved) return;
+        if (isCaptchaSolved()) { onCaptchaDetected(); return; }
 
-            if (isCaptchaSolved()) {
-                onCaptchaDetected();
-                return;
-            }
-
-            for (const m of mutations) {
-                if (m.type === 'childList') {
-                    for (const node of m.addedNodes) {
-                        if (node.nodeType !== 1) continue;
-                        startCopyPolling(node);
-                        const btns = findContinueButtons(node);
-                        for (const b of btns) if (isVisibleAndEnabled(b) && !alreadyDoneContinue) tryClickButton(b, 6, 'Continue button').then(ok => { if (ok) alreadyDoneContinue = true; });
-                    }
-                } else if (m.type === 'attributes' && m.target && m.target.nodeType === 1) {
-                    const btns = findContinueButtons(m.target);
-                    for (const b of btns) if (isVisibleAndEnabled(b) && !alreadyDoneContinue) tryClickButton(b, 6, 'Continue button').then(ok => { if (ok) alreadyDoneContinue = true; });
+        for (const m of mutations) {
+            if (m.type === 'childList') {
+                for (const node of m.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    startCopyPolling(node);
+                    const btns = findContinueButtons(node);
+                    for (const b of btns) if (isVisibleAndEnabled(b)) tryClickButton(b, 6, 'Continue button');
                 }
             }
-        } catch (e) { if (debug) console.error('[Volcano] MutationObserver callback error', e); }
+        }
     });
 
     try {
@@ -1116,11 +1072,11 @@ function handleVolcano() {
             attributes: true,
             attributeFilter: ['disabled', 'aria-disabled', 'style', 'class', 'value']
         });
-    } catch (e) { if (debug) console.warn('[Volcano] observer setup failed', e); }
+    } catch (e) { console.warn('observer setup failed', e); }
 
     function messageListener(ev) {
         try {
-            const d = ev && ev.data;
+            const d = ev?.data;
             if (!d) return;
             if ((typeof d === 'string' && /recaptcha|hcaptcha|captcha|g-recaptcha-response|success/i.test(d)) ||
                 (typeof d === 'object' && /recaptcha|hcaptcha|captcha|g-recaptcha-response|success/i.test(JSON.stringify(d)))) {
@@ -1136,25 +1092,24 @@ function handleVolcano() {
     if (isCaptchaSolved()) { onCaptchaDetected(); return; }
 
     let pollCount = 0;
-    pollIv = setInterval(() => {
+    pollInterval = setInterval(() => {
         pollCount++;
-        if (captchaSolved) { clearInterval(pollIv); pollIv = null; return; }
+        if (captchaSolved) { clearInterval(pollInterval); pollInterval = null; return; }
         if (isCaptchaSolved()) { onCaptchaDetected(); return; }
-        if (!alreadyDoneContinue) clickContinueRobust().then(ok => { if (ok) alreadyDoneContinue = true; });
-        if (pollCount > 30) { clearInterval(pollIv); pollIv = null; }
-    }, 1000);
+        clickWorkInkButtonRobust();
+        if (pollCount > 60) { clearInterval(pollInterval); pollInterval = null; }
+    }, 500);
 
     window.addEventListener('beforeunload', () => {
         try { mo.disconnect(); } catch (_) {}
-        try { window.removeEventListener('message', messageListener); } catch (_) {}
+        window.removeEventListener('message', messageListener);
         if (copyInterval) clearInterval(copyInterval);
-        if (pollIv) clearInterval(pollIv);
+        if (pollInterval) clearInterval(pollInterval);
     });
 }
 
 // ---------- auto-run ----------
 if (host.includes("key.volcano.wtf")) handleVolcano();
-
 
 
 // Handler for WORK.INK
