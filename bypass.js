@@ -8,7 +8,7 @@
         const host = location.hostname;
         const defaultTime = 8;
         const normalTime = 60;
-        const ver = "2.0.0.2";
+        const ver = "2.5";
         const debug = true;
 
         // ---------- language & translations ----------
@@ -27,7 +27,7 @@
                 bypassSuccess: "Bypass thành công",
                 backToCheckpoint: "Đang về lại Checkpoint...",
                 captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-                version: "Phiên bản v2.0.0.2",
+                version: "Phiên bản 2.5",
                 madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
                 autoRedirect: "Tự động chuyển hướng"
             },
@@ -44,7 +44,7 @@
                 bypassSuccess: "Bypass successful",
                 backToCheckpoint: "Returning to checkpoint...",
                 captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-                version: "Version v2.0.0.2",
+                version: "Version 2.5",
                 madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
                 autoRedirect: "Auto-redirect"
             }
@@ -962,6 +962,14 @@ function handleVolcano() {
     // ---------- captcha detection ----------
     function isCaptchaSolved() {
         try {
+            // Check for Volcano-specific success indicators
+            const successText = document.querySelector('#success-text');
+            const successIcon = document.querySelector('#success-i');
+            if (successText && successText.textContent.includes('Success!') && successIcon && successIcon.style.display === 'block') {
+                if (debug) console.log('[Volcano] Captcha solved: Success text and icon detected');
+                return true;
+            }
+
             const token = document.querySelector('textarea[name="g-recaptcha-response"], input[name="cf_captcha_kind"], input[name="cf_captcha_response"], input[name="cf_challenge_state"]');
             if (token && token.value && token.value.trim().length > 0) return true;
 
@@ -1225,6 +1233,18 @@ function handleWorkInk() {
             if (destinationReceived) return;
             spoofSocials();
             spoofWorkink();
+
+            // Check for "Go to Destination" button to detect captcha completion
+            const gtdButton = document.querySelector('button.large.accessBtn');
+            if (gtdButton && gtdButton.textContent.includes('Go To Destination')) {
+                const loader = gtdButton.querySelector('.loader-btn');
+                // If loader is not present or hidden, captcha is likely solved
+                if (!loader || loader.style.display === 'none' || !gtdButton.classList.contains('button-disabled')) {
+                    if (debug) console.log('[Debug] Go to Destination button ready, captcha solved');
+                    return;
+                }
+            }
+
             setTimeout(keepSpoofing, 3000);
         }
         keepSpoofing();
@@ -1591,6 +1611,32 @@ function handleWorkInk() {
         childList: true,
         subtree: true,
         attributes: false
+    });
+
+    // Additional observer specifically for Workink "Go to Destination" button
+    const gtdObserver = new MutationObserver(() => {
+        try {
+            const gtdButton = document.querySelector('button.large.accessBtn');
+            if (gtdButton && gtdButton.textContent.includes('Go To Destination')) {
+                const loader = gtdButton.querySelector('.loader-btn');
+                const isDisabled = gtdButton.classList.contains('button-disabled');
+
+                // If button exists without loader showing or not disabled, captcha is solved
+                if ((!loader || loader.style.display === 'none') && !isDisabled) {
+                    if (debug) console.log('[Debug] Workink captcha solved: Go to Destination button is ready');
+                    triggerBypass('gtd-ready');
+                }
+            }
+        } catch (e) {
+            if (debug) console.error('[Debug] GTD observer error:', e);
+        }
+    });
+
+    gtdObserver.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'style']
     });
 }
 
