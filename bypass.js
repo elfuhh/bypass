@@ -8,7 +8,7 @@
         const host = location.hostname;
         const defaultTime = 8;
         const normalTime = 60;
-        const ver = "3.0.0.0";
+        const ver = "3.0.1.5";
         const debug = true;
 
         // ---------- language & translations ----------
@@ -28,7 +28,7 @@
                 bypassSuccess: "Bypass thành công",
                 backToCheckpoint: "Đang về lại Checkpoint...",
                 captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-                version: "Phiên bản 3.0.0.0",
+                version: "Phiên bản 3.0.1.5",
                 madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
                 autoRedirect: "Tự động chuyển hướng"
             },
@@ -48,7 +48,7 @@
                 bypassSuccess: "Bypass successful",
                 backToCheckpoint: "Returning to checkpoint...",
                 captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-                version: "Version 3.0.0.0",
+                version: "Version 3.0.1.5",
                 madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
                 autoRedirect: "Auto-redirect"
             }
@@ -1233,35 +1233,97 @@ function handleWorkInk() {
         keepSpoofing();
     }
 
-    async function spoofSocials() {
-        if (!LinkInfoFn || socialCheckInProgress) return;
-        const socials = (LinkInfoFn.socials || LinkInfoFn?.socials) || [];
-        if (socials.length > 1) {
-            socialCheckInProgress = true;
-            if (panel) panel.show('socialsdetected', 'info');
-            for (let i = 0; i < socials.length; i++) {
-                const soc = socials[i];
-                try {
-                    if (sendMessage) {
-                        sendMessage.call(sessionController, types.ss, {
-                            url: soc.url
-                        });
-                        if (panel) panel.show('socialsdetected', 'warning');
-                    }
-                } catch (e) {
-                    if (debug) console.error('[Debug] Error spoofing social', e);
-                }
-                if (i < socials.length - 1) await new Promise(r => setTimeout(r, 2000));
-            }
-            setTimeout(() => {
-                if (panel) panel.show('reloading', 'info');
-                window.location.reload();
-            }, 4000);
-        } else {
-            triggerBypass('social-check-complete');
-        }
-    }
 
+async function spoofSocials() {
+    if (!LinkInfoFn || socialCheckInProgress) return;
+    const socials = (LinkInfoFn.socials || LinkInfoFn?.socials) || [];
+
+    // Log total number of socials found
+    if (debug) console.log(`[Debug] Found ${socials.length} social(s) to spoof`);
+
+    if (socials.length > 1) {
+        socialCheckInProgress = true;
+        if (panel) panel.show('socialsdetected', 'info');
+
+        // Log each social being spoofed
+        for (let i = 0; i < socials.length; i++) {
+            const soc = socials[i];
+            try {
+                // Extract social platform name from URL if possible
+                let platformName = 'Unknown';
+                try {
+                    const url = new URL(soc.url);
+                    platformName = url.hostname.replace('www.', '').split('.')[0];
+                    platformName = platformName.charAt(0).toUpperCase() + platformName.slice(1);
+                } catch (e) {
+                    platformName = soc.url.substring(0, 30) + '...';
+                }
+
+                if (debug) console.log(`[Debug] Spoofing social ${i + 1}/${socials.length}: ${platformName} (${soc.url})`);
+
+                if (sendMessage) {
+                    sendMessage.call(sessionController, types.ss, {
+                        url: soc.url
+                    });
+                    if (panel) panel.show('socialsdetected', 'warning');
+
+                    if (debug) console.log(`[Debug] ✓ Successfully spoofed ${platformName}`);
+                }
+            } catch (e) {
+                if (debug) console.error(`[Debug] ✗ Error spoofing social ${i + 1}:`, e);
+            }
+
+            // 500ms delay between each social (changed from 2000ms)
+            if (i < socials.length - 1) {
+                await new Promise(r => setTimeout(r, 500));
+            }
+        }
+
+        if (debug) console.log(`[Debug] Finished spoofing all ${socials.length} socials`);
+
+        // Reload after spoofing all socials
+        setTimeout(() => {
+            if (panel) panel.show('reloading', 'info');
+            if (debug) console.log('[Debug] Reloading page after social spoof...');
+            window.location.reload();
+        }, 2000);
+    } else if (socials.length === 1) {
+        // Handle single social case
+        if (debug) console.log('[Debug] Only 1 social detected, spoofing...');
+        socialCheckInProgress = true;
+
+        const soc = socials[0];
+        try {
+            let platformName = 'Unknown';
+            try {
+                const url = new URL(soc.url);
+                platformName = url.hostname.replace('www.', '').split('.')[0];
+                platformName = platformName.charAt(0).toUpperCase() + platformName.slice(1);
+            } catch (e) {
+                platformName = soc.url.substring(0, 30) + '...';
+            }
+
+            if (debug) console.log(`[Debug] Spoofing social 1/1: ${platformName} (${soc.url})`);
+
+            if (sendMessage) {
+                sendMessage.call(sessionController, types.ss, {
+                    url: soc.url
+                });
+                if (debug) console.log(`[Debug] ✓ Successfully spoofed ${platformName}`);
+            }
+        } catch (e) {
+            if (debug) console.error('[Debug] ✗ Error spoofing social:', e);
+        }
+
+        // Continue with bypass instead of reloading for single social
+        if (debug) console.log('[Debug] Single social complete, continuing bypass...');
+        triggerBypass('social-check-complete');
+    } else {
+        // No socials to spoof
+        if (debug) console.log('[Debug] No socials detected, continuing bypass...');
+        triggerBypass('social-check-complete');
+    }
+}
     function spoofWorkink() {
         if (!LinkInfoFn) return;
         const socials = LinkInfoFn.socials || [];
