@@ -1,127 +1,127 @@
 (async () => {
-        'use strict';
+    'use strict';
 
-        // safety for environments with/without unsafeWindow
-        const safeWindow = (typeof unsafeWindow !== 'undefined') ? unsafeWindow : window;
+    // safety for environments with/without unsafeWindow
+    const safeWindow = (typeof unsafeWindow !== 'undefined') ? unsafeWindow : window;
 
-        // ---------- config ----------
-        const host = location.hostname;
-        const defaultTime = 8;
-        const normalTime = 60;
-        const ver = "3.0.1.5";
-        const debug = true;
+    // ---------- config ----------
+    const host = location.hostname;
+    const defaultTime = 8;
+    const normalTime = 60;
+    const ver = "3.0.2.0";
+    const debug = true;
 
-        // ---------- language & translations ----------
-        let currentLanguage = localStorage.getItem('lang') || 'vi';
-        const translations = {
-            vi: {
-                title: "Dyrian and elfuhh Bypass",
-                pleaseSolveCaptcha: "Vui lòng giải CAPTCHA để tiếp tục",
-                captchaSuccess: "CAPTCHA đã thành công",
-                redirectingToWork: "Đang qua Work.ink...",
-                redirectingToWorkCountdown: "Đang chuyển hướng tới Work.ink trong {seconds} giây...",
-                bypassSuccessCopy: "Bypass thành công, đã Copy Key (bấm 'Cho Phép' nếu có)",
-                waitingCaptcha: "Đang chờ CAPTCHA...",
-                pleaseReload: "Vui lòng tải lại trang...(workink lỗi)",
-                reloading: "đã giả mạo tải lại...",
-                socialsdetected: "các mạng xã hội được phát hiện bắt đầu giả mạo...",
-                bypassSuccess: "Bypass thành công",
-                backToCheckpoint: "Đang về lại Checkpoint...",
-                captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-                version: "Phiên bản 3.0.1.5",
-                madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
-                autoRedirect: "Tự động chuyển hướng"
-            },
-            en: {
-                title: "Dyrian and elfuhh Bypass",
-                pleaseSolveCaptcha: "Please solve the CAPTCHA to continue",
-                captchaSuccess: "CAPTCHA solved successfully",
-                redirectingToWork: "Redirecting to Work.ink...",
-                redirectingToWorkCountdown: "Redirecting to the Work.ink...",
-                redirectingToWorkCountdown1: "Redirecting to the Work.ink in 1 second...",
-                redirectingToWorkCountdown1: "Redirecting to the Work.ink in 2 second...",
-                bypassSuccessCopy: "Bypass successful! Key copied (click 'Allow' if prompted)",
-                waitingCaptcha: "Waiting for CAPTCHA...",
-                pleaseReload: "Please reload the page...(workink bugs)",
-                reloading: "done spoofing reloading...",
-                socialsdetected: "socials detected beginning to spoof...",
-                bypassSuccess: "Bypass successful",
-                backToCheckpoint: "Returning to checkpoint...",
-                captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-                version: "Version 3.0.1.5",
-                madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
-                autoRedirect: "Auto-redirect"
-            }
-        };
+    // ---------- language & translations ----------
+    let currentLanguage = localStorage.getItem('lang') || 'vi';
+    const translations = {
+        vi: {
+            title: "Dyrian and elfuhh Bypass",
+            pleaseSolveCaptcha: "Vui lòng giải CAPTCHA để tiếp tục",
+            captchaSuccess: "CAPTCHA đã thành công",
+            redirectingToWork: "Đang qua Work.ink...",
+            redirectingToWorkCountdown: "Đang chuyển hướng tới Work.ink trong {seconds} giây...",
+            bypassSuccessCopy: "Bypass thành công, đã Copy Key (bấm 'Cho Phép' nếu có)",
+            waitingCaptcha: "Đang chờ CAPTCHA...",
+            pleaseReload: "Vui lòng tải lại trang...(workink lỗi)",
+            reloading: "đã giả mạo tải lại...",
+            socialsdetected: "các mạng xã hội được phát hiện bắt đầu giả mạo...",
+            bypassSuccess: "Bypass thành công",
+            backToCheckpoint: "Đang về lại Checkpoint...",
+            captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
+            version: "Phiên bản 3.0.2.0",
+            madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
+            autoRedirect: "Tự động chuyển hướng"
+        },
+        en: {
+            title: "Dyrian and elfuhh Bypass",
+            pleaseSolveCaptcha: "Please solve the CAPTCHA to continue",
+            captchaSuccess: "CAPTCHA solved successfully",
+            redirectingToWork: "Redirecting to Work.ink...",
+            redirectingToWorkCountdown: "Redirecting to the Work.ink...",
+            redirectingToWorkCountdown1: "Redirecting to the Work.ink in 1 second...",
+            redirectingToWorkCountdown1: "Redirecting to the Work.ink in 2 second...",
+            bypassSuccessCopy: "Bypass successful! Key copied (click 'Allow' if prompted)",
+            waitingCaptcha: "Waiting for CAPTCHA...",
+            pleaseReload: "Please reload the page...(workink bugs)",
+            reloading: "done spoofing reloading...",
+            socialsdetected: "socials detected beginning to spoof...",
+            bypassSuccess: "Bypass successful",
+            backToCheckpoint: "Returning to checkpoint...",
+            captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
+            version: "Version 3.0.2.0",
+            madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
+            autoRedirect: "Auto-redirect"
+        }
+    };
 
-        function t(key, replacements = {}) {
-            const map = translations[currentLanguage] && translations[currentLanguage][key] ? translations[currentLanguage][key] : key;
-            let text = map;
-            Object.keys(replacements).forEach(k => {
-                text = text.replace(`{${k}}`, replacements[k]);
-            });
-            return text;
+    function t(key, replacements = {}) {
+        const map = translations[currentLanguage] && translations[currentLanguage][key] ? translations[currentLanguage][key] : key;
+        let text = map;
+        Object.keys(replacements).forEach(k => {
+            text = text.replace(`{${k}}`, replacements[k]);
+        });
+        return text;
+    }
+
+    // ---------- persistent setting keys ----------
+    const STORAGE_KEY_DELAY = 'dyrian_redirect_delay';
+    const STORAGE_KEY_LANG = 'lang';
+    const STORAGE_KEY_AUTO = 'dyrian_auto_redirect';
+
+    // selectedDelay: global variable used by GUI and callback
+    let selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
+    let autoRedirectEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
+    let redirectInProgress = false; // Global redirect flag
+
+    // ---------- GUI: BypassPanel ----------
+    class BypassPanel {
+        constructor() {
+            this.container = null;
+            this.shadow = null;
+            this.panel = null;
+            this.statusText = null;
+            this.statusDot = null;
+            this.versionEl = null;
+            this.creditEl = null;
+            this.langBtns = [];
+            this.currentMessageKey = null;
+            this.currentType = 'info';
+            this.currentReplacements = {};
+            this.isMinimized = false;
+            this.body = null;
+            this.minimizeBtn = null;
+
+            // slider elements
+            this.sliderContainer = null;
+            this.sliderValue = null;
+            this.slider = null;
+            this.startBtn = null;
+            this.autoToggle = null;
+            this.onStartCallback = null;
+            this.redirectInProgress = false; // Instance redirect flag
+
+            this.init();
         }
 
-        // ---------- persistent setting keys ----------
-        const STORAGE_KEY_DELAY = 'dyrian_redirect_delay';
-        const STORAGE_KEY_LANG = 'lang';
-        const STORAGE_KEY_AUTO = 'dyrian_auto_redirect';
-
-        // selectedDelay: global variable used by GUI and callback
-        let selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
-        let autoRedirectEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
-        let redirectInProgress = false; // Global redirect flag
-
-        // ---------- GUI: BypassPanel ----------
-        class BypassPanel {
-            constructor() {
-                this.container = null;
-                this.shadow = null;
-                this.panel = null;
-                this.statusText = null;
-                this.statusDot = null;
-                this.versionEl = null;
-                this.creditEl = null;
-                this.langBtns = [];
-                this.currentMessageKey = null;
-                this.currentType = 'info';
-                this.currentReplacements = {};
-                this.isMinimized = false;
-                this.body = null;
-                this.minimizeBtn = null;
-
-                // slider elements
-                this.sliderContainer = null;
-                this.sliderValue = null;
-                this.slider = null;
-                this.startBtn = null;
-                this.autoToggle = null;
-                this.onStartCallback = null;
-                this.redirectInProgress = false; // Instance redirect flag
-
-                this.init();
+        init() {
+            try {
+                this.createPanel();
+                this.setupEventListeners();
+            } catch (e) {
+                if (debug) console.error('GUI init error', e);
             }
+        }
 
-            init() {
-                try {
-                    this.createPanel();
-                    this.setupEventListeners();
-                } catch (e) {
-                    if (debug) console.error('GUI init error', e);
-                }
-            }
+        createPanel() {
+            this.container = document.createElement('div');
+            // use closed shadow root so page scripts can't easily tamper with UI elements
+            this.shadow = this.container.attachShadow({
+                mode: 'closed'
+            });
 
-            createPanel() {
-                this.container = document.createElement('div');
-                // use closed shadow root so page scripts can't easily tamper with UI elements
-                this.shadow = this.container.attachShadow({
-                    mode: 'closed'
-                });
-
-                const style = document.createElement('style');
-                // full CSS (kept from original) - safe to include in JS textContent
-                style.textContent = `
+            const style = document.createElement('style');
+            // full CSS (kept from original) - safe to include in JS textContent
+            style.textContent = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -600,12 +600,12 @@ input:checked + .toggle-slider:before {
     }
 }
       `;
-                this.shadow.appendChild(style);
+            this.shadow.appendChild(style);
 
-                const lastDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
-                const autoEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
+            const lastDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
+            const autoEnabled = localStorage.getItem(STORAGE_KEY_AUTO) === 'true';
 
-                const panelHTML = `
+            const panelHTML = `
 <div class="panel-container">
   <div class="panel">
     <div class="header">
@@ -661,1028 +661,920 @@ input:checked + .toggle-slider:before {
 </div>
       `;
 
-                const wrapper = document.createElement('div');
-                wrapper.innerHTML = panelHTML;
-                // append the element contained in wrapper; no scripts inside the HTML string
-                this.shadow.appendChild(wrapper.firstElementChild);
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = panelHTML;
+            // append the element contained in wrapper; no scripts inside the HTML string
+            this.shadow.appendChild(wrapper.firstElementChild);
 
-                // elements
-                this.panel = this.shadow.querySelector('.panel');
-                this.statusText = this.shadow.querySelector('#status-text');
-                this.statusDot = this.shadow.querySelector('#status-dot');
-                this.versionEl = this.shadow.querySelector('#version');
-                this.creditEl = this.shadow.querySelector('#credit');
-                this.langBtns = Array.from(this.shadow.querySelectorAll('.lang-btn'));
-                this.body = this.shadow.querySelector('#panel-body');
-                this.minimizeBtn = this.shadow.querySelector('#minimize-btn');
-                this.sliderContainer = this.shadow.querySelector('#slider-container');
-                this.sliderValue = this.shadow.querySelector('#slider-value');
-                this.slider = this.shadow.querySelector('#delay-slider');
-                this.startBtn = this.shadow.querySelector('#start-btn');
-                this.autoToggle = this.shadow.querySelector('#auto-toggle');
-                this.autoContainer = this.shadow.querySelector('#auto-container');
+            // elements
+            this.panel = this.shadow.querySelector('.panel');
+            this.statusText = this.shadow.querySelector('#status-text');
+            this.statusDot = this.shadow.querySelector('#status-dot');
+            this.versionEl = this.shadow.querySelector('#version');
+            this.creditEl = this.shadow.querySelector('#credit');
+            this.langBtns = Array.from(this.shadow.querySelectorAll('.lang-btn'));
+            this.body = this.shadow.querySelector('#panel-body');
+            this.minimizeBtn = this.shadow.querySelector('#minimize-btn');
+            this.sliderContainer = this.shadow.querySelector('#slider-container');
+            this.sliderValue = this.shadow.querySelector('#slider-value');
+            this.slider = this.shadow.querySelector('#delay-slider');
+            this.startBtn = this.shadow.querySelector('#start-btn');
+            this.autoToggle = this.shadow.querySelector('#auto-toggle');
+            this.autoContainer = this.shadow.querySelector('#auto-container');
 
-                // attach container to document
-                try {
-                    document.documentElement.appendChild(this.container);
-                } catch (e) {
-                    // If append fails (very early), try later
-                    setTimeout(() => {
-                        try {
-                            document.documentElement.appendChild(this.container);
-                        } catch (_) {}
-                    }, 200);
-                }
-
-                // Ensure selectedDelay is in sync with UI immediately
-                try {
-                    selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
-                    this.slider.value = String(selectedDelay);
-                    this.sliderValue.textContent = `${selectedDelay}s`;
-                } catch (e) {
-                    if (debug) console.warn('Failed to initialize slider from storage', e);
-                }
-            }
-
-            setupEventListeners() {
-                this.langBtns.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        currentLanguage = btn.dataset.lang;
-                        try {
-                            localStorage.setItem(STORAGE_KEY_LANG, currentLanguage);
-                        } catch (_) {}
-                        this.updateLanguage();
-                    });
-                });
-
-                this.minimizeBtn.addEventListener('click', () => {
-                    this.isMinimized = !this.isMinimized;
-                    this.body.classList.toggle('hidden');
-                    this.minimizeBtn.textContent = this.isMinimized ? '+' : '−';
-                });
-
-                // auto-redirect toggle
-                this.autoToggle.addEventListener('change', (e) => {
-                    autoRedirectEnabled = e.target.checked;
+            // attach container to document
+            try {
+                document.documentElement.appendChild(this.container);
+            } catch (e) {
+                // If append fails (very early), try later
+                setTimeout(() => {
                     try {
-                        localStorage.setItem(STORAGE_KEY_AUTO, String(autoRedirectEnabled));
-                    } catch (err) {
-                        if (debug) console.warn('Could not save auto-redirect to localStorage', err);
-                    }
+                        document.documentElement.appendChild(this.container);
+                    } catch (_) {}
+                }, 200);
+            }
 
-                    // Show/hide start button based on auto-redirect state
-                    if (autoRedirectEnabled) {
-                        this.startBtn.classList.add('hidden');
-                    } else {
-                        this.startBtn.classList.remove('hidden');
-                    }
+            // Ensure selectedDelay is in sync with UI immediately
+            try {
+                selectedDelay = parseInt(localStorage.getItem(STORAGE_KEY_DELAY) || '0', 10);
+                this.slider.value = String(selectedDelay);
+                this.sliderValue.textContent = `${selectedDelay}s`;
+            } catch (e) {
+                if (debug) console.warn('Failed to initialize slider from storage', e);
+            }
+        }
 
-                    if (debug) console.log('[Debug] Auto-redirect:', autoRedirectEnabled);
-                });
-
-                // slider change updates selectedDelay and persists immediately
-                this.slider.addEventListener('input', (e) => {
-                    selectedDelay = parseInt(e.target.value, 10);
-                    this.sliderValue.textContent = `${selectedDelay}s`;
+        setupEventListeners() {
+            this.langBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentLanguage = btn.dataset.lang;
                     try {
-                        localStorage.setItem(STORAGE_KEY_DELAY, String(selectedDelay));
-                    } catch (err) {
-                        if (debug) console.warn('Could not save delay to localStorage', err);
-                    }
+                        localStorage.setItem(STORAGE_KEY_LANG, currentLanguage);
+                    } catch (_) {}
+                    this.updateLanguage();
                 });
+            });
 
-                // start button triggers the callback with current selectedDelay
-                this.startBtn.addEventListener('click', () => {
-                    if (this.redirectInProgress) {
-                        if (debug) console.log('[Debug] Start button: redirect already in progress');
-                        return;
-                    }
+            this.minimizeBtn.addEventListener('click', () => {
+                this.isMinimized = !this.isMinimized;
+                this.body.classList.toggle('hidden');
+                this.minimizeBtn.textContent = this.isMinimized ? '+' : '−';
+            });
 
-                    if (this.onStartCallback) {
-                        this.redirectInProgress = true;
-                        redirectInProgress = true;
-                        try {
-                            this.onStartCallback(selectedDelay);
-                        } catch (err) {
-                            if (debug) console.error('[Debug] onStartCallback error', err);
-                            this.redirectInProgress = false;
-                            redirectInProgress = false;
-                        }
-                    }
-                });
-            }
-
-            updateLanguage() {
+            // auto-redirect toggle
+            this.autoToggle.addEventListener('change', (e) => {
+                autoRedirectEnabled = e.target.checked;
                 try {
-                    localStorage.setItem(STORAGE_KEY_LANG, currentLanguage);
-                } catch (e) {}
-                this.langBtns.forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.lang === currentLanguage);
-                });
-                const titleEl = this.shadow.querySelector('.title');
-                if (titleEl) titleEl.textContent = 'BYPASS SYSTEM';
-                if (this.versionEl) this.versionEl.textContent = t('version');
-                if (this.creditEl) this.creditEl.textContent = t('madeBy');
-
-                // Update toggle label
-                const toggleLabel = this.shadow.querySelector('.toggle-label');
-                if (toggleLabel) toggleLabel.textContent = t('autoRedirect');
-
-                if (this.currentMessageKey) {
-                    this.show(this.currentMessageKey, this.currentType, this.currentReplacements);
+                    localStorage.setItem(STORAGE_KEY_AUTO, String(autoRedirectEnabled));
+                } catch (err) {
+                    if (debug) console.warn('Could not save auto-redirect to localStorage', err);
                 }
-            }
 
-            show(messageKeyOrTitle, typeOrSubtitle = 'info', replacements = {}) {
-                this.currentMessageKey = messageKeyOrTitle;
-                this.currentType = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
-                this.currentReplacements = replacements;
-                let message = '';
-                if (translations[currentLanguage] && translations[currentLanguage][messageKeyOrTitle]) {
-                    message = t(messageKeyOrTitle, replacements);
-                    if (typeof typeOrSubtitle === 'string' && !['info', 'success', 'warning', 'error'].includes(typeOrSubtitle) && typeOrSubtitle.length > 0) {
-                        message = typeOrSubtitle;
-                    }
+                // Show/hide start button based on auto-redirect state
+                if (autoRedirectEnabled) {
+                    this.startBtn.classList.add('hidden');
                 } else {
-                    message = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
+                    this.startBtn.classList.remove('hidden');
                 }
-                if (this.statusText) this.statusText.textContent = message;
-                if (this.statusDot) this.statusDot.className = `status-dot ${this.currentType}`;
-            }
 
-            showBypassingWorkink() {
-                this.show('captchaSuccessBypassing', 'success');
-            }
+                if (debug) console.log('[Debug] Auto-redirect:', autoRedirectEnabled);
+            });
 
-            // Called when a destination is ready and we want to show the slider / allow the user to start redirect
-            showCaptchaComplete() {
-                // Prevent multiple calls
-                if (this.redirectInProgress || redirectInProgress) {
-                    if (debug) console.log('[Debug] showCaptchaComplete: redirect already in progress, ignoring');
+            // slider change updates selectedDelay and persists immediately
+            this.slider.addEventListener('input', (e) => {
+                selectedDelay = parseInt(e.target.value, 10);
+                this.sliderValue.textContent = `${selectedDelay}s`;
+                try {
+                    localStorage.setItem(STORAGE_KEY_DELAY, String(selectedDelay));
+                } catch (err) {
+                    if (debug) console.warn('Could not save delay to localStorage', err);
+                }
+            });
+
+            // start button triggers the callback with current selectedDelay
+            this.startBtn.addEventListener('click', () => {
+                if (this.redirectInProgress) {
+                    if (debug) console.log('[Debug] Start button: redirect already in progress');
                     return;
                 }
 
-                this.sliderContainer.classList.add('active');
-                this.sliderContainer.style.display = 'block';
-                this.show('bypassSuccess', 'success');
-                this.sliderValue.textContent = `${selectedDelay}s`;
-                try {
-                    this.slider.value = String(selectedDelay);
-                } catch (e) {}
-
-                if (debug) console.log('[Debug] Slider container shown, autoRedirectEnabled:', autoRedirectEnabled);
-
-                // If auto-redirect is enabled, automatically trigger the callback after showing UI
-                if (autoRedirectEnabled) {
-                    if (debug) console.log('[Debug] Auto-redirect is enabled, starting auto countdown with delay:', selectedDelay);
-
-                    // Mark redirect as in progress BEFORE calling callback
+                if (this.onStartCallback) {
                     this.redirectInProgress = true;
                     redirectInProgress = true;
-
-                    // Use a longer delay to ensure UI is fully rendered
-                    setTimeout(() => {
-                        if (this.onStartCallback) {
-                            if (debug) console.log('[Debug] Calling onStartCallback with delay:', selectedDelay);
-                            try {
-                                this.onStartCallback(selectedDelay);
-                            } catch (err) {
-                                if (debug) console.error('[Debug] Auto-redirect callback error', err);
-                                this.redirectInProgress = false;
-                                redirectInProgress = false;
-                            }
-                        } else {
-                            if (debug) console.warn('[Debug] onStartCallback is not set!');
-                            this.redirectInProgress = false;
-                            redirectInProgress = false;
-                        }
-                    }, 500);
-                } else {
-                    if (debug) console.log('[Debug] Auto-redirect is disabled, waiting for manual start');
-                }
-            }
-
-            // allow external code to set the Start button action
-            setCallback(callback) {
-                this.onStartCallback = callback;
-            }
-
-            // start a countdown that replaces the status text with a single "Redirecting in Xs..." message
-            startCountdown(seconds) {
-                if (debug) console.log('[Debug] startCountdown called with seconds:', seconds);
-
-                // Hide only the slider elements, keep auto-redirect toggle visible
-                const sliderHeader = this.shadow.querySelector('.slider-header');
-                const sliderTrack = this.shadow.querySelector('.slider-track');
-                if (sliderHeader) sliderHeader.style.display = 'none';
-                if (sliderTrack) sliderTrack.style.display = 'none';
-                if (this.startBtn) this.startBtn.style.display = 'none';
-
-                if (debug) console.log('[Debug] Slider elements hidden, auto-toggle remains visible');
-
-                try {
-                    if (this.startBtn) this.startBtn.disabled = true;
-                } catch (e) {}
-
-                let remaining = Math.max(0, parseInt(seconds, 10) || 0);
-
-                // Directly set the text without calling show() to avoid conflicts
-                if (this.statusText) this.statusText.textContent = `Redirecting in ${remaining}s...`;
-                if (this.statusDot) this.statusDot.className = 'status-dot info';
-
-                const interval = setInterval(() => {
-                    remaining--;
-                    if (remaining > 0) {
-                        if (this.statusText) this.statusText.textContent = `Redirecting in ${remaining}s...`;
-                    } else {
-                        clearInterval(interval);
-                        if (this.statusText) this.statusText.textContent = `Redirecting...`;
+                    try {
+                        this.onStartCallback(selectedDelay);
+                    } catch (err) {
+                        if (debug) console.error('[Debug] onStartCallback error', err);
+                        this.redirectInProgress = false;
+                        redirectInProgress = false;
                     }
-                }, 1000);
-
-                return {
-                    stop: () => clearInterval(interval)
-                };
-            }
+                }
+            });
         }
 
-
-// ---------- instantiate GUI ----------
-let panel = null;
-try {
-    panel = new BypassPanel();
-    panel.show('pleaseSolveCaptcha', 'info');
-} catch (e) {
-    if (debug) console.error('Failed to create panel', e);
-}
-
-// ---------- bypass logic ----------
-
-if (host.includes("key.volcano.wtf")) handleVolcano();
-else if (host.includes("work.ink")) handleWorkInk();
-
-// ---------- Full Volcano handler ----------
-function handleVolcano() {
-    if (panel) panel.show('pleaseSolveCaptcha', 'info', translations[currentLanguage].pleaseSolveCaptcha);
-
-    let alreadyDoneContinue = false;
-    let captchaSolved = false;
-    let copyInterval = null;
-    let pollIv = null;
-    let attemptsMap = new WeakMap();
-    window._volcano_last_href = window._volcano_last_href || location.href;
-    const workButtonSelector = "#primaryButton";
-
-    // ---------- helpers ----------
-    function nodeTextIncludes(node, needle) {
-        try {
-            if (!node) return false;
-            const txt = (node.innerText || node.textContent || '').trim().toLowerCase();
-            return txt.includes(needle.toLowerCase());
-        } catch (e) { return false; }
-    }
-
-    function findContinueButtons(root = document) {
-        const candidates = Array.from(root.querySelectorAll('button, input[type=submit], a, [role="button"]'));
-        const patterns = [/continue/i, /next/i, /go to destination/i, /visit/i, /claim/i, /submit/i];
-        return candidates.filter(btn => {
+        updateLanguage() {
             try {
-                const text = (btn.innerText || btn.value || btn.getAttribute('aria-label') || '').trim();
-                if (!text) return false;
-                return patterns.some(rx => rx.test(text));
-            } catch (e) { return false; }
-        });
-    }
+                localStorage.setItem(STORAGE_KEY_LANG, currentLanguage);
+            } catch (e) {}
+            this.langBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === currentLanguage);
+            });
+            const titleEl = this.shadow.querySelector('.title');
+            if (titleEl) titleEl.textContent = 'BYPASS SYSTEM';
+            if (this.versionEl) this.versionEl.textContent = t('version');
+            if (this.creditEl) this.creditEl.textContent = t('madeBy');
 
-    function isVisibleAndEnabled(el) {
-        try {
-            if (!el) return false;
-            const style = getComputedStyle(el);
-            const visible = style && style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
-            const disabled = el.disabled || (el.getAttribute && el.getAttribute('aria-disabled') === 'true');
-            return visible && !disabled;
-        } catch (e) { return false; }
-    }
+            // Update toggle label
+            const toggleLabel = this.shadow.querySelector('.toggle-label');
+            if (toggleLabel) toggleLabel.textContent = t('autoRedirect');
 
-    // ---------- captcha detection ----------
-    function isCaptchaSolved() {
-        try {
-            const token = document.querySelector('textarea[name="g-recaptcha-response"], input[name="cf_captcha_kind"], input[name="cf_captcha_response"], input[name="cf_challenge_state"]');
-            if (token && token.value && token.value.trim().length > 0) return true;
-
-            const successSelectors = ['.captcha-success', '.challenge-complete', '.cf-success', '.success-message', '#captcha-success'];
-            for (const sel of successSelectors) {
-                const el = document.querySelector(sel);
-                if (el && nodeTextIncludes(el, 'success')) return true;
-            }
-
-            const xpath = "//text()[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'success!')]/parent::*";
-            const res = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-            if (res && res.singleNodeValue) return true;
-
-            const cont = findContinueButtons(document).find(isVisibleAndEnabled);
-            if (cont) return true;
-        } catch (e) { if (debug) console.error('[Volcano] isCaptchaSolved error', e); }
-        return false;
-    }
-
-    // ---------- click helpers ----------
-    async function tryClickButton(btn, maxAttempts = 6, label = 'button') {
-        if (!btn) return false;
-        const prev = attemptsMap.get(btn) || 0;
-        if (prev >= maxAttempts) return false;
-        attemptsMap.set(btn, prev + 1);
-
-        try {
-            if (!isVisibleAndEnabled(btn)) return false;
-            btn.click();
-            await new Promise(r => setTimeout(r, 100));
-
-            if (location.href !== window._volcano_last_href) {
-                window._volcano_last_href = location.href;
-                return true;
-            }
-            if (!isVisibleAndEnabled(btn)) return true;
-        } catch (e) { if (debug) console.error('[Volcano] tryClickButton error', e); }
-        return false;
-    }
-
-    async function clickContinueRobust() {
-        const buttons = findContinueButtons(document);
-        if (!buttons.length) return false;
-        for (const btn of buttons) {
-            for (let i = 0; i < 6; i++) {
-                const ok = await tryClickButton(btn, 6, 'Continue button');
-                if (ok) return true;
-                await new Promise(r => setTimeout(r, 100));
+            if (this.currentMessageKey) {
+                this.show(this.currentMessageKey, this.currentType, this.currentReplacements);
             }
         }
-        return false;
-    }
 
-    async function clickWorkInkButtonRobust() {
-        try {
-            const btn = document.querySelector(workButtonSelector);
-            if (!btn || !isVisibleAndEnabled(btn)) return false;
-
-            await new Promise(r => setTimeout(r, 1000)); // 2s delay
-            btn.click();
-            if (panel) panel.show('redirectingToWork', 'info', translations[currentLanguage].redirectingToWork);
-
-            return true;
-        } catch (e) { if (debug) console.error('[Volcano] clickWorkInkButtonRobust error', e); }
-        return false;
-    }
-
-    function startCopyPolling(node) {
-        try {
-            const copyBtn = (node && node.querySelector) ?
-                node.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']") :
-                document.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']");
-
-            if (copyBtn && !copyBtn._difz_copy_interval) {
-                copyBtn._difz_copy_interval = setInterval(() => {
-                    try { copyBtn.click(); if (panel) panel.show('bypassSuccessCopy', 'success', translations[currentLanguage].bypassSuccessCopy); } catch (_) {}
-                }, 500);
-                copyInterval = copyBtn._difz_copy_interval;
-                return true;
+        show(messageKeyOrTitle, typeOrSubtitle = 'info', replacements = {}) {
+            this.currentMessageKey = messageKeyOrTitle;
+            this.currentType = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
+            this.currentReplacements = replacements;
+            let message = '';
+            if (translations[currentLanguage] && translations[currentLanguage][messageKeyOrTitle]) {
+                message = t(messageKeyOrTitle, replacements);
+                if (typeof typeOrSubtitle === 'string' && !['info', 'success', 'warning', 'error'].includes(typeOrSubtitle) && typeOrSubtitle.length > 0) {
+                    message = typeOrSubtitle;
+                }
+            } else {
+                message = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
             }
-        } catch (e) { if (debug) console.error('[Volcano] startCopyPolling error', e); }
-        return false;
-    }
+            if (this.statusText) this.statusText.textContent = message;
+            if (this.statusDot) this.statusDot.className = `status-dot ${this.currentType}`;
+        }
 
-    // ---------- on captcha solved ----------
-    async function onCaptchaDetected() {
-        if (captchaSolved) return;
-        captchaSolved = true;
+        showBypassingWorkink() {
+            this.show('captchaSuccessBypassing', 'success');
+        }
 
-        if (panel) panel.show('captchaSuccess', 'success', translations[currentLanguage].captchaSuccess);
-
-        setTimeout(async () => {
-            const okWorkInk = await clickWorkInkButtonRobust();
-            if (!okWorkInk) console.warn('[Volcano] Work.ink button not clicked');
-
-            try { mo.disconnect(); } catch (_) {}
-            try { window.removeEventListener('message', messageListener); } catch (_) {}
-            if (pollIv) { clearInterval(pollIv); pollIv = null; }
-        }, 2000);
-    }
-
-    // ---------- observers & listeners ----------
-    const mo = new MutationObserver((mutations) => {
-        try {
-            if (captchaSolved) return;
-
-            if (isCaptchaSolved()) {
-                onCaptchaDetected();
+        // Called when a destination is ready and we want to show the slider / allow the user to start redirect
+        showCaptchaComplete() {
+            // Prevent multiple calls
+            if (this.redirectInProgress || redirectInProgress) {
+                if (debug) console.log('[Debug] showCaptchaComplete: redirect already in progress, ignoring');
                 return;
             }
 
-            for (const m of mutations) {
-                if (m.type === 'childList') {
-                    for (const node of m.addedNodes) {
-                        if (node.nodeType !== 1) continue;
-                        startCopyPolling(node);
-                        const btns = findContinueButtons(node);
-                        for (const b of btns) if (isVisibleAndEnabled(b) && !alreadyDoneContinue) tryClickButton(b, 6, 'Continue button').then(ok => { if (ok) alreadyDoneContinue = true; });
+            this.sliderContainer.classList.add('active');
+            this.sliderContainer.style.display = 'block';
+            this.show('bypassSuccess', 'success');
+            this.sliderValue.textContent = `${selectedDelay}s`;
+            try {
+                this.slider.value = String(selectedDelay);
+            } catch (e) {}
+
+            if (debug) console.log('[Debug] Slider container shown, autoRedirectEnabled:', autoRedirectEnabled);
+
+            // If auto-redirect is enabled, automatically trigger the callback after showing UI
+            if (autoRedirectEnabled) {
+                if (debug) console.log('[Debug] Auto-redirect is enabled, starting auto countdown with delay:', selectedDelay);
+
+                // Mark redirect as in progress BEFORE calling callback
+                this.redirectInProgress = true;
+                redirectInProgress = true;
+
+                // Use a longer delay to ensure UI is fully rendered
+                setTimeout(() => {
+                    if (this.onStartCallback) {
+                        if (debug) console.log('[Debug] Calling onStartCallback with delay:', selectedDelay);
+                        try {
+                            this.onStartCallback(selectedDelay);
+                        } catch (err) {
+                            if (debug) console.error('[Debug] Auto-redirect callback error', err);
+                            this.redirectInProgress = false;
+                            redirectInProgress = false;
+                        }
+                    } else {
+                        if (debug) console.warn('[Debug] onStartCallback is not set!');
+                        this.redirectInProgress = false;
+                        redirectInProgress = false;
                     }
-                } else if (m.type === 'attributes' && m.target && m.target.nodeType === 1) {
-                    const btns = findContinueButtons(m.target);
-                    for (const b of btns) if (isVisibleAndEnabled(b) && !alreadyDoneContinue) tryClickButton(b, 6, 'Continue button').then(ok => { if (ok) alreadyDoneContinue = true; });
+                }, 500);
+            } else {
+                if (debug) console.log('[Debug] Auto-redirect is disabled, waiting for manual start');
+            }
+        }
+
+        // allow external code to set the Start button action
+        setCallback(callback) {
+            this.onStartCallback = callback;
+        }
+
+        // start a countdown that replaces the status text with a single "Redirecting in Xs..." message
+        startCountdown(seconds) {
+            if (debug) console.log('[Debug] startCountdown called with seconds:', seconds);
+
+            // Hide only the slider elements, keep auto-redirect toggle visible
+            const sliderHeader = this.shadow.querySelector('.slider-header');
+            const sliderTrack = this.shadow.querySelector('.slider-track');
+            if (sliderHeader) sliderHeader.style.display = 'none';
+            if (sliderTrack) sliderTrack.style.display = 'none';
+            if (this.startBtn) this.startBtn.style.display = 'none';
+
+            if (debug) console.log('[Debug] Slider elements hidden, auto-toggle remains visible');
+
+            try {
+                if (this.startBtn) this.startBtn.disabled = true;
+            } catch (e) {}
+
+            let remaining = Math.max(0, parseInt(seconds, 10) || 0);
+
+            // Directly set the text without calling show() to avoid conflicts
+            if (this.statusText) this.statusText.textContent = `Redirecting in ${remaining}s...`;
+            if (this.statusDot) this.statusDot.className = 'status-dot info';
+
+            const interval = setInterval(() => {
+                remaining--;
+                if (remaining > 0) {
+                    if (this.statusText) this.statusText.textContent = `Redirecting in ${remaining}s...`;
+                } else {
+                    clearInterval(interval);
+                    if (this.statusText) this.statusText.textContent = `Redirecting...`;
+                }
+            }, 1000);
+
+            return {
+                stop: () => clearInterval(interval)
+            };
+        }
+    }
+
+
+    // ---------- instantiate GUI ----------
+    let panel = null;
+    try {
+        panel = new BypassPanel();
+        panel.show('pleaseSolveCaptcha', 'info');
+    } catch (e) {
+        if (debug) console.error('Failed to create panel', e);
+    }
+
+    // ---------- bypass logic ----------
+
+    if (host.includes("key.volcano.wtf")) handleVolcano();
+    else if (host.includes("work.ink")) handleWorkInk();
+
+    // ---------- Full Volcano handler ----------
+    function handleVolcano() {
+        if (panel) panel.show('pleaseSolveCaptcha', 'info');
+        if (debug) console.log('[Debug] Waiting Captcha');
+
+        let alreadyDoneContinue = false;
+        let alreadyDoneCopy = false;
+
+        function actOnCheckpoint(node) {
+            if (!alreadyDoneContinue) {
+                const buttons = node && node.nodeType === 1 ?
+                    node.matches('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]') ?
+                    [node] :
+                    node.querySelectorAll('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]') :
+                    document.querySelectorAll('#primaryButton[type="submit"], button[type="submit"], a, input[type=button], input[type=submit]');
+                for (const btn of buttons) {
+                    const text = (btn.innerText || btn.value || "").trim().toLowerCase();
+                    if (text.includes("continue") || text.includes("next step")) {
+                        const disabled = btn.disabled || btn.getAttribute("aria-disabled") === "true";
+                        const style = getComputedStyle(btn);
+                        const visible = style.display !== "none" && style.visibility !== "hidden" && btn.offsetParent !== null;
+                        if (visible && !disabled) {
+                            alreadyDoneContinue = true;
+                            if (panel) panel.show('captchaSuccess', 'success');
+                            if (debug) console.log('[Debug] Captcha Solved');
+
+                            for (const btn of buttons) {
+                                const currentBtn = btn;
+                                const currentPanel = panel;
+
+                                setTimeout(() => {
+                                    try {
+                                        currentBtn.click();
+                                        if (currentPanel) currentPanel.show('redirectingToWork', 'info');
+                                        if (debug) console.log('[Debug] Clicking Continue');
+                                    } catch (err) {
+                                        if (debug) console.log('[Debug] No Continue Found', err);
+                                    }
+                                }, 300);
+                            }
+                            return true;
+                        }
+                    }
                 }
             }
-        } catch (e) { if (debug) console.error('[Volcano] MutationObserver callback error', e); }
-    });
 
-    try {
+            const copyBtn = node && node.nodeType === 1 ?
+                node.matches("#copy-key-btn, .copy-btn, [aria-label='Copy']") ?
+                node :
+                node.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']") :
+                document.querySelector("#copy-key-btn, .copy-btn, [aria-label='Copy']");
+            if (copyBtn) {
+                setInterval(() => {
+                    try {
+                        copyBtn.click();
+                        if (debug) console.log('[Debug] Copy button spam click');
+                        if (panel) panel.show('bypassSuccessCopy', 'success');
+                    } catch (err) {
+                        if (debug) console.log('[Debug] No Copy Found', err);
+                    }
+                }, 500);
+                return true;
+            }
+
+            return false;
+        }
+
+        const mo = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList') {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1) {
+                            if (actOnCheckpoint(node)) {
+                                if (alreadyDoneCopy) {
+                                    mo.disconnect();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (mutation.type === 'attributes' && mutation.target.nodeType === 1) {
+                    if (actOnCheckpoint(mutation.target)) {
+                        if (alreadyDoneCopy) {
+                            mo.disconnect();
+                            return;
+                        }
+                    }
+                }
+            }
+        });
+
         mo.observe(document.documentElement, {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ['disabled', 'aria-disabled', 'style', 'class', 'value']
+            attributeFilter: ['disabled', 'aria-disabled', 'style']
         });
-    } catch (e) { if (debug) console.warn('[Volcano] observer setup failed', e); }
 
-    function messageListener(ev) {
-        try {
-            const d = ev && ev.data;
-            if (!d) return;
-            if ((typeof d === 'string' && /recaptcha|hcaptcha|captcha|g-recaptcha-response|success/i.test(d)) ||
-                (typeof d === 'object' && /recaptcha|hcaptcha|captcha|g-recaptcha-response|success/i.test(JSON.stringify(d)))) {
-                onCaptchaDetected();
-            }
-        } catch (e) {}
-    }
-    window.addEventListener('message', messageListener, false);
-
-    // ---------- initial attempts & polling fallback ----------
-    startCopyPolling(document);
-
-    if (isCaptchaSolved()) { onCaptchaDetected(); return; }
-
-    let pollCount = 0;
-    pollIv = setInterval(() => {
-        pollCount++;
-        if (captchaSolved) { clearInterval(pollIv); pollIv = null; return; }
-        if (isCaptchaSolved()) { onCaptchaDetected(); return; }
-        if (!alreadyDoneContinue) clickContinueRobust().then(ok => { if (ok) alreadyDoneContinue = true; });
-        if (pollCount > 30) { clearInterval(pollIv); pollIv = null; }
-    }, 1000);
-
-    window.addEventListener('beforeunload', () => {
-        try { mo.disconnect(); } catch (_) {}
-        try { window.removeEventListener('message', messageListener); } catch (_) {}
-        if (copyInterval) clearInterval(copyInterval);
-        if (pollIv) clearInterval(pollIv);
-    });
-}
-
-// ---------- auto-run ----------
-if (host.includes("key.volcano.wtf")) handleVolcano();
-
-// Handler for WORK.INK
-function handleWorkInk() {
-    if (panel) panel.show('pleaseSolveCaptcha', 'info');
-
-    let sessionController = undefined;
-    let sendMessage = undefined;
-    let LinkInfoFn = undefined;
-    let LinkDestinationFn = undefined;
-    let bypassTriggered = false;
-    let destinationReceived = false;
-    let destinationProcessed = false;
-    let socialCheckInProgress = false;
-    let destinationURL = null;
-
-    const map = {
-        onLI: ["onLinkInfo"],
-        onLD: ["onLinkDestination"]
-    };
-    const types = {
-        an: 'c_announce',
-        mo: 'c_monetization',
-        ss: 'c_social_started',
-        rr: 'c_recaptcha_response',
-        hr: 'c_hcaptcha_response',
-        tr: 'c_turnstile_response',
-        ad: 'c_adblocker_detected',
-        fl: 'c_focus_lost',
-        os: 'c_offers_skipped',
-        ok: 'c_offer_skipped',
-        fo: 'c_focus',
-        wp: 'c_workink_pass_available',
-        wu: 'c_workink_pass_use',
-        pi: 'c_ping',
-        kk: 'c_keyapp_key'
-    };
-
-    function getName(obj, candidates = null) {
-        if (!obj || typeof obj !== 'object') return {
-            fn: null,
-            index: -1,
-            name: null
-        };
-        if (candidates) {
-            for (let i = 0; i < candidates.length; i++) {
-                const name = candidates[i];
-                if (typeof obj[name] === "function") return {
-                    fn: obj[name],
-                    index: i,
-                    name
-                };
-            }
-        } else {
-            for (let i in obj) {
-                if (typeof obj[i] === "function" && obj[i].length == 2) return {
-                    fn: obj[i],
-                    name: i
-                };
+        if (actOnCheckpoint()) {
+            if (alreadyDoneCopy) {
+                mo.disconnect();
             }
         }
-        return {
-            fn: null,
-            index: -1,
-            name: null
-        };
     }
+    // Handler for WORK.INK
+    function handleWorkInk() {
+        if (panel) panel.show('pleaseSolveCaptcha', 'info');
 
-    function triggerBypass(reason) {
-        if (bypassTriggered) return;
-        bypassTriggered = true;
-        if (debug) console.log('[Debug] trigger Bypass via:', reason);
-        if (panel) panel.show('captchaSuccessBypassing', 'success');
+        let sessionController = undefined;
+        let sendMessage = undefined;
+        let LinkInfoFn = undefined;
+        let LinkDestinationFn = undefined;
+        let bypassTriggered = false;
+        let destinationReceived = false;
+        let destinationProcessed = false;
+        let socialCheckInProgress = false;
+        let destinationURL = null;
 
-        function keepSpoofing() {
-            if (destinationReceived) return;
-            spoofSocials();
-            spoofWorkink();
+        const map = {
+            onLI: ["onLinkInfo"],
+            onLD: ["onLinkDestination"]
+        };
+        const types = {
+            an: 'c_announce',
+            mo: 'c_monetization',
+            ss: 'c_social_started',
+            rr: 'c_recaptcha_response',
+            hr: 'c_hcaptcha_response',
+            tr: 'c_turnstile_response',
+            ad: 'c_adblocker_detected',
+            fl: 'c_focus_lost',
+            os: 'c_offers_skipped',
+            ok: 'c_offer_skipped',
+            fo: 'c_focus',
+            wp: 'c_workink_pass_available',
+            wu: 'c_workink_pass_use',
+            pi: 'c_ping',
+            kk: 'c_keyapp_key'
+        };
 
-            // Check for "Go to Destination" button to detect captcha completion
-            const gtdButton = document.querySelector('button.large.accessBtn');
-            if (gtdButton && gtdButton.textContent.includes('Go To Destination')) {
-                const loader = gtdButton.querySelector('.loader-btn');
-                // If loader is not present or hidden, captcha is likely solved
-                if (!loader || loader.style.display === 'none' || !gtdButton.classList.contains('button-disabled')) {
-                    if (debug) console.log('[Debug] Go to Destination button ready, captcha solved');
-                    return;
+        function getName(obj, candidates = null) {
+            if (!obj || typeof obj !== 'object') return {
+                fn: null,
+                index: -1,
+                name: null
+            };
+            if (candidates) {
+                for (let i = 0; i < candidates.length; i++) {
+                    const name = candidates[i];
+                    if (typeof obj[name] === "function") return {
+                        fn: obj[name],
+                        index: i,
+                        name
+                    };
+                }
+            } else {
+                for (let i in obj) {
+                    if (typeof obj[i] === "function" && obj[i].length == 2) return {
+                        fn: obj[i],
+                        name: i
+                    };
                 }
             }
-
-            setTimeout(keepSpoofing, 3000);
+            return {
+                fn: null,
+                index: -1,
+                name: null
+            };
         }
-        keepSpoofing();
-    }
+
+        function triggerBypass(reason) {
+            if (bypassTriggered) return;
+            bypassTriggered = true;
+            if (debug) console.log('[Debug] trigger Bypass via:', reason);
+            if (panel) panel.show('captchaSuccessBypassing', 'success');
+
+            function keepSpoofing() {
+                if (destinationReceived) return;
+                spoofSocials();
+                spoofWorkink();
+
+                // Check for "Go to Destination" button to detect captcha completion
+                const gtdButton = document.querySelector('button.large.accessBtn');
+                if (gtdButton && gtdButton.textContent.includes('Go To Destination')) {
+                    const loader = gtdButton.querySelector('.loader-btn');
+                    // If loader is not present or hidden, captcha is likely solved
+                    if (!loader || loader.style.display === 'none' || !gtdButton.classList.contains('button-disabled')) {
+                        if (debug) console.log('[Debug] Go to Destination button ready, captcha solved');
+                        return;
+                    }
+                }
+
+                setTimeout(keepSpoofing, 3000);
+            }
+            keepSpoofing();
+        }
 
 
-async function spoofSocials() {
-    if (!LinkInfoFn || socialCheckInProgress) return;
-    const socials = (LinkInfoFn.socials || LinkInfoFn?.socials) || [];
+        async function spoofSocials() {
+            if (!LinkInfoFn || socialCheckInProgress) return;
+            const socials = (LinkInfoFn.socials || LinkInfoFn?.socials) || [];
 
-    // Log total number of socials found
-    if (debug) console.log(`[Debug] Found ${socials.length} social(s) to spoof`);
+            // Log total number of socials found
+            if (debug) console.log(`[Debug] Found ${socials.length} social(s) to spoof`);
 
-    if (socials.length > 1) {
-        socialCheckInProgress = true;
-        if (panel) panel.show('socialsdetected', 'info');
+            if (socials.length > 1) {
+                socialCheckInProgress = true;
+                if (panel) panel.show('socialsdetected', 'info');
 
-        // Log each social being spoofed
-        for (let i = 0; i < socials.length; i++) {
-            const soc = socials[i];
-            try {
-                // Extract social platform name from URL if possible
-                let platformName = 'Unknown';
+                // Log each social being spoofed
+                for (let i = 0; i < socials.length; i++) {
+                    const soc = socials[i];
+                    try {
+                        // Extract social platform name from URL if possible
+                        let platformName = 'Unknown';
+                        try {
+                            const url = new URL(soc.url);
+                            platformName = url.hostname.replace('www.', '').split('.')[0];
+                            platformName = platformName.charAt(0).toUpperCase() + platformName.slice(1);
+                        } catch (e) {
+                            platformName = soc.url.substring(0, 30) + '...';
+                        }
+
+                        if (debug) console.log(`[Debug] Spoofing social ${i + 1}/${socials.length}: ${platformName} (${soc.url})`);
+
+                        if (sendMessage) {
+                            sendMessage.call(sessionController, types.ss, {
+                                url: soc.url
+                            });
+                            if (panel) panel.show('socialsdetected', 'warning');
+
+                            if (debug) console.log(`[Debug] ✓ Successfully spoofed ${platformName}`);
+                        }
+                    } catch (e) {
+                        if (debug) console.error(`[Debug] ✗ Error spoofing social ${i + 1}:`, e);
+                    }
+
+                    // 500ms delay between each social (changed from 2000ms)
+                    if (i < socials.length - 1) {
+                        await new Promise(r => setTimeout(r, 500));
+                    }
+                }
+
+                if (debug) console.log(`[Debug] Finished spoofing all ${socials.length} socials`);
+
+                // Reload after spoofing all socials
+                setTimeout(() => {
+                    if (panel) panel.show('reloading', 'info');
+                    if (debug) console.log('[Debug] Reloading page after social spoof...');
+                    window.location.reload();
+                }, 2000);
+            } else if (socials.length === 1) {
+                // Handle single social case
+                if (debug) console.log('[Debug] Only 1 social detected, spoofing...');
+                socialCheckInProgress = true;
+
+                const soc = socials[0];
                 try {
-                    const url = new URL(soc.url);
-                    platformName = url.hostname.replace('www.', '').split('.')[0];
-                    platformName = platformName.charAt(0).toUpperCase() + platformName.slice(1);
+                    let platformName = 'Unknown';
+                    try {
+                        const url = new URL(soc.url);
+                        platformName = url.hostname.replace('www.', '').split('.')[0];
+                        platformName = platformName.charAt(0).toUpperCase() + platformName.slice(1);
+                    } catch (e) {
+                        platformName = soc.url.substring(0, 30) + '...';
+                    }
+
+                    if (debug) console.log(`[Debug] Spoofing social 1/1: ${platformName} (${soc.url})`);
+
+                    if (sendMessage) {
+                        sendMessage.call(sessionController, types.ss, {
+                            url: soc.url
+                        });
+                        if (debug) console.log(`[Debug] ✓ Successfully spoofed ${platformName}`);
+                    }
                 } catch (e) {
-                    platformName = soc.url.substring(0, 30) + '...';
+                    if (debug) console.error('[Debug] ✗ Error spoofing social:', e);
                 }
 
-                if (debug) console.log(`[Debug] Spoofing social ${i + 1}/${socials.length}: ${platformName} (${soc.url})`);
+                // Continue with bypass instead of reloading for single social
+                if (debug) console.log('[Debug] Single social complete, continuing bypass...');
+                triggerBypass('social-check-complete');
+            } else {
+                // No socials to spoof
+                if (debug) console.log('[Debug] No socials detected, continuing bypass...');
+                triggerBypass('social-check-complete');
+            }
+        }
 
-                if (sendMessage) {
-                    sendMessage.call(sessionController, types.ss, {
+        function spoofWorkink() {
+            if (!LinkInfoFn) return;
+            const socials = LinkInfoFn.socials || [];
+            for (let i = 0; i < socials.length; i++) {
+                const soc = socials[i];
+                try {
+                    if (sendMessage) sendMessage.call(this, types.ss, {
                         url: soc.url
                     });
-                    if (panel) panel.show('socialsdetected', 'warning');
-
-                    if (debug) console.log(`[Debug] ✓ Successfully spoofed ${platformName}`);
+                } catch (e) {
+                    if (debug) console.error(e);
                 }
-            } catch (e) {
-                if (debug) console.error(`[Debug] ✗ Error spoofing social ${i + 1}:`, e);
             }
 
-            // 500ms delay between each social (changed from 2000ms)
-            if (i < socials.length - 1) {
-                await new Promise(r => setTimeout(r, 500));
-            }
-        }
-
-        if (debug) console.log(`[Debug] Finished spoofing all ${socials.length} socials`);
-
-        // Reload after spoofing all socials
-        setTimeout(() => {
-            if (panel) panel.show('reloading', 'info');
-            if (debug) console.log('[Debug] Reloading page after social spoof...');
-            window.location.reload();
-        }, 2000);
-    } else if (socials.length === 1) {
-        // Handle single social case
-        if (debug) console.log('[Debug] Only 1 social detected, spoofing...');
-        socialCheckInProgress = true;
-
-        const soc = socials[0];
-        try {
-            let platformName = 'Unknown';
-            try {
-                const url = new URL(soc.url);
-                platformName = url.hostname.replace('www.', '').split('.')[0];
-                platformName = platformName.charAt(0).toUpperCase() + platformName.slice(1);
-            } catch (e) {
-                platformName = soc.url.substring(0, 30) + '...';
-            }
-
-            if (debug) console.log(`[Debug] Spoofing social 1/1: ${platformName} (${soc.url})`);
-
-            if (sendMessage) {
-                sendMessage.call(sessionController, types.ss, {
-                    url: soc.url
-                });
-                if (debug) console.log(`[Debug] ✓ Successfully spoofed ${platformName}`);
-            }
-        } catch (e) {
-            if (debug) console.error('[Debug] ✗ Error spoofing social:', e);
-        }
-
-        // Continue with bypass instead of reloading for single social
-        if (debug) console.log('[Debug] Single social complete, continuing bypass...');
-        triggerBypass('social-check-complete');
-    } else {
-        // No socials to spoof
-        if (debug) console.log('[Debug] No socials detected, continuing bypass...');
-        triggerBypass('social-check-complete');
-    }
-}
-    function spoofWorkink() {
-        if (!LinkInfoFn) return;
-        const socials = LinkInfoFn.socials || [];
-        for (let i = 0; i < socials.length; i++) {
-            const soc = socials[i];
-            try {
-                if (sendMessage) sendMessage.call(this, types.ss, {
-                    url: soc.url
-                });
-            } catch (e) {
-                if (debug) console.error(e);
-            }
-        }
-
-        const monetizations = sessionController?.monetizations || [];
-        for (let i = 0; i < monetizations.length; i++) {
-            const monetization = monetizations[i];
-            try {
-                const monetizationId = monetization.id;
-                const monetizationSendMessage = monetization.sendMessage;
-                switch (monetizationId) {
-                    case 22:
-                        monetizationSendMessage && monetizationSendMessage.call(monetization, {
-                            event: 'read'
-                        });
-                        break;
-                    case 25:
-                        monetizationSendMessage && monetizationSendMessage.call(monetization, {
-                            event: 'start'
-                        });
-                        monetizationSendMessage && monetizationSendMessage.call(monetization, {
-                            event: 'installClicked'
-                        });
-                        try {
-                            fetch('/_api/v2/affiliate/operaGX', {
-                                method: 'GET',
-                                mode: 'no-cors'
+            const monetizations = sessionController?.monetizations || [];
+            for (let i = 0; i < monetizations.length; i++) {
+                const monetization = monetizations[i];
+                try {
+                    const monetizationId = monetization.id;
+                    const monetizationSendMessage = monetization.sendMessage;
+                    switch (monetizationId) {
+                        case 22:
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
+                                event: 'read'
                             });
-                        } catch (_) {}
-                        setTimeout(() => {
+                            break;
+                        case 25:
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
+                                event: 'start'
+                            });
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
+                                event: 'installClicked'
+                            });
                             try {
-                                fetch('https://work.ink/_api/v2/callback/operaGX', {
-                                    method: 'POST',
-                                    mode: 'no-cors',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        'noteligible': true
-                                    })
+                                fetch('/_api/v2/affiliate/operaGX', {
+                                    method: 'GET',
+                                    mode: 'no-cors'
                                 });
                             } catch (_) {}
-                        }, 5000);
-                        break;
-                    case 34:
-                        monetizationSendMessage && monetizationSendMessage.call(monetization, {
-                            event: 'start'
-                        });
-                        monetizationSendMessage && monetizationSendMessage.call(monetization, {
-                            event: 'installClicked'
-                        });
-                        break;
-                    case 71:
-                        monetizationSendMessage && monetizationSendMessage.call(monetization, {
-                            event: 'start'
-                        });
-                        monetizationSendMessage && monetizationSendMessage.call(monetization, {
-                            event: 'installed'
-                        });
-                        break;
-                    case 45:
-                    case 57:
-                        monetizationSendMessage && monetizationSendMessage.call(monetization, {
-                            event: 'installed'
-                        });
-                        break;
-                    default:
-                        break;
+                            setTimeout(() => {
+                                try {
+                                    fetch('https://work.ink/_api/v2/callback/operaGX', {
+                                        method: 'POST',
+                                        mode: 'no-cors',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            'noteligible': true
+                                        })
+                                    });
+                                } catch (_) {}
+                            }, 5000);
+                            break;
+                        case 34:
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
+                                event: 'start'
+                            });
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
+                                event: 'installClicked'
+                            });
+                            break;
+                        case 71:
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
+                                event: 'start'
+                            });
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
+                                event: 'installed'
+                            });
+                            break;
+                        case 45:
+                        case 57:
+                            monetizationSendMessage && monetizationSendMessage.call(monetization, {
+                                event: 'installed'
+                            });
+                            break;
+                        default:
+                            break;
+                    }
+                } catch (e) {
+                    if (debug) console.error('[Debug] Error faking monetization:', e);
                 }
-            } catch (e) {
-                if (debug) console.error('[Debug] Error faking monetization:', e);
             }
         }
-    }
 
-    function createSendMessage() {
-        return function(...args) {
-            const packet_type = args[0];
-            if (packet_type !== types.pi) {
-                if (debug) console.log('[Debug] Message sent:', packet_type, args[1]);
-            }
-            if (packet_type === types.tr) triggerBypass('tr');
-            return sendMessage ? sendMessage.apply(this, args) : undefined;
-        };
-    }
+        function createSendMessage() {
+            return function(...args) {
+                const pt = args[0]; // packet_type
 
-    function createLinkInfo() {
-        return async function(...args) {
-            const [info] = args;
-            LinkInfoFn = info;
+                if (pt !== types.pi) {
+                    if (debug) console.log('[Debug] Message sent:', pt, args[1]);
+                }
+
+                if (pt === types.tr || pt === types.rr || pt === types.hr) {
+                    if (debug) console.log('[Debug] Captcha bypassed via TR');
+                    triggerBypass('tr');
+                }
+                return sendMessage ? sendMessage.apply(this, args) : undefined;
+            };
+        }
+
+        function createLinkInfo() {
+            return async function(...args) {
+                const [info] = args;
+                LinkInfoFn = info;
+                try {
+                    Object.defineProperty(info, 'isAdblockEnabled', {
+                        get: () => false,
+                        set: () => {},
+                        configurable: true
+                    });
+                } catch (e) {}
+                spoofWorkink();
+                return LinkInfoFn ? LinkInfoFn.apply(this, args) : undefined;
+            };
+        }
+
+        function redirect(url) {
+            if (panel) panel.show('backToCheckpoint', 'info');
+            window.location.href = url;
+        }
+
+        function startCountdown(url, waitLeft) {
+            if (panel) panel.show('bypassSuccess', 'warning');
+            let left = parseInt(waitLeft, 10) || 0;
+            const iv = setInterval(() => {
+                left -= 1;
+                if (left > 0) {
+                    if (panel) panel.show('bypassSuccess', 'warning');
+                } else {
+                    clearInterval(iv);
+                    redirect(url);
+                }
+            }, 1000);
+        }
+
+        function createLinkDestination() {
+            return async function(...args) {
+                const [data] = args;
+                destinationReceived = true;
+                destinationURL = data?.url || null;
+                if (!destinationProcessed) {
+                    destinationProcessed = true;
+                    if (debug) console.log("[Debug] Destination data: ", data);
+                    // Show UI slider and allow user to start / auto redirect
+                    if (panel) {
+                        panel.showCaptchaComplete();
+                        // set GUI callback to trigger redirect with chosen delay
+                        panel.setCallback((delay) => {
+                            // delay is in seconds
+                            if (!destinationURL) {
+                                if (debug) console.warn('No destination URL to redirect to');
+                                return;
+                            }
+                            // update global selectedDelay so UI matches
+                            selectedDelay = parseInt(delay, 10) || 0;
+                            try {
+                                localStorage.setItem(STORAGE_KEY_DELAY, String(selectedDelay));
+                            } catch (_) {}
+
+                            // let GUI show countdown and then perform the redirect
+                            if (panel) {
+                                panel.startCountdown(selectedDelay);
+                            }
+                            setTimeout(() => {
+                                window.location.href = destinationURL;
+                            }, selectedDelay * 1000);
+                        });
+                    }
+                }
+                return LinkDestinationFn ? LinkDestinationFn.apply(this, args) : undefined;
+            };
+        }
+
+        function setupProxies() {
+            const send = getName(sessionController);
+            const info = getName(sessionController, map.onLI);
+            const dest = getName(sessionController, map.onLD);
+            if (!send.fn || !info.fn || !dest.fn) return;
+            sendMessage = send.fn;
+            LinkInfoFn = info.fn;
+            LinkDestinationFn = dest.fn;
             try {
-                Object.defineProperty(info, 'isAdblockEnabled', {
-                    get: () => false,
-                    set: () => {},
+                Object.defineProperty(sessionController, send.name, {
+                    get: createSendMessage,
+                    set: v => (sendMessage = v),
+                    configurable: true
+                });
+                Object.defineProperty(sessionController, info.name, {
+                    get: createLinkInfo,
+                    set: v => (LinkInfoFn = v),
+                    configurable: true
+                });
+                Object.defineProperty(sessionController, dest.name, {
+                    get: createLinkDestination,
+                    set: v => (LinkDestinationFn = v),
                     configurable: true
                 });
             } catch (e) {}
-            spoofWorkink();
-            return LinkInfoFn ? LinkInfoFn.apply(this, args) : undefined;
-        };
-    }
-
-    function redirect(url) {
-        if (panel) panel.show('backToCheckpoint', 'info');
-        window.location.href = url;
-    }
-
-    function startCountdown(url, waitLeft) {
-        if (panel) panel.show('bypassSuccess', 'warning');
-        let left = parseInt(waitLeft, 10) || 0;
-        const iv = setInterval(() => {
-            left -= 1;
-            if (left > 0) {
-                if (panel) panel.show('bypassSuccess', 'warning');
-            } else {
-                clearInterval(iv);
-                redirect(url);
-            }
-        }, 1000);
-    }
-
-    function createLinkDestination() {
-        return async function(...args) {
-            const [data] = args;
-            destinationReceived = true;
-            destinationURL = data?.url || null;
-            if (!destinationProcessed) {
-                destinationProcessed = true;
-                if (debug) console.log("[Debug] Destination data: ", data);
-                // Show UI slider and allow user to start / auto redirect
-                if (panel) {
-                    panel.showCaptchaComplete();
-                    // set GUI callback to trigger redirect with chosen delay
-                    panel.setCallback((delay) => {
-                        // delay is in seconds
-                        if (!destinationURL) {
-                            if (debug) console.warn('No destination URL to redirect to');
-                            return;
-                        }
-                        // update global selectedDelay so UI matches
-                        selectedDelay = parseInt(delay, 10) || 0;
-                        try {
-                            localStorage.setItem(STORAGE_KEY_DELAY, String(selectedDelay));
-                        } catch (_) {}
-
-                        // let GUI show countdown and then perform the redirect
-                        if (panel) {
-                            panel.startCountdown(selectedDelay);
-                        }
-                        setTimeout(() => {
-                            window.location.href = destinationURL;
-                        }, selectedDelay * 1000);
-                    });
-                }
-            }
-            return LinkDestinationFn ? LinkDestinationFn.apply(this, args) : undefined;
-        };
-    }
-
-    function setupProxies() {
-        const send = getName(sessionController);
-        const info = getName(sessionController, map.onLI);
-        const dest = getName(sessionController, map.onLD);
-        if (!send.fn || !info.fn || !dest.fn) return;
-        sendMessage = send.fn;
-        LinkInfoFn = info.fn;
-        LinkDestinationFn = dest.fn;
-        try {
-            Object.defineProperty(sessionController, send.name, {
-                get: createSendMessage,
-                set: v => (sendMessage = v),
-                configurable: true
-            });
-            Object.defineProperty(sessionController, info.name, {
-                get: createLinkInfo,
-                set: v => (LinkInfoFn = v),
-                configurable: true
-            });
-            Object.defineProperty(sessionController, dest.name, {
-                get: createLinkDestination,
-                set: v => (LinkDestinationFn = v),
-                configurable: true
-            });
-        } catch (e) {}
-    }
-
-    function checkController(target, prop, value) {
-        if (value && typeof value === 'object' && getName(value).fn && getName(value, map.onLI).fn && getName(value, map.onLD).fn && !sessionController) {
-            sessionController = value;
-            setupProxies();
-            if (debug) console.log('[Debug] Controller detected:', sessionController);
         }
-        return Reflect.set(target, prop, value);
-    }
 
-    function createComponentProxy(comp) {
-        return new Proxy(comp, {
-            construct(target, args) {
-                const instance = Reflect.construct(target, args);
-                if (instance.$$.ctx) {
-                    instance.$$.ctx = new Proxy(instance.$$.ctx, {
-                        set: checkController
-                    });
+        function checkController(target, prop, value) {
+            if (value && typeof value === 'object' && getName(value).fn && getName(value, map.onLI).fn && getName(value, map.onLD).fn && !sessionController) {
+                sessionController = value;
+                setupProxies();
+                if (debug) console.log('[Debug] Controller detected:', sessionController);
+            }
+            return Reflect.set(target, prop, value);
+        }
+
+        function createComponentProxy(comp) {
+            return new Proxy(comp, {
+                construct(target, args) {
+                    const instance = Reflect.construct(target, args);
+                    if (instance.$$.ctx) {
+                        instance.$$.ctx = new Proxy(instance.$$.ctx, {
+                            set: checkController
+                        });
+                    }
+                    return instance;
                 }
-                return instance;
+            });
+        }
+
+        function createNodeProxy(node) {
+            return async (...args) => {
+                const result = await node(...args);
+                return new Proxy(result, {
+                    get: (t, p) => p === 'component' ? createComponentProxy(t.component) : Reflect.get(t, p)
+                });
+            };
+        }
+
+        function createKitProxy(kit) {
+            if (!kit?.start) return [false, kit];
+            return [true, new Proxy(kit, {
+                get(target, prop) {
+                    if (prop === 'start') {
+                        return function(...args) {
+                            try {
+                                const [nodes, , opts] = args;
+                                if (nodes?.nodes && opts?.node_ids) {
+                                    const idx = opts.node_ids[1];
+                                    if (nodes.nodes[idx]) {
+                                        nodes.nodes[idx] = createNodeProxy(nodes.nodes[idx]);
+                                    }
+                                }
+                            } catch (_) {}
+                            return kit.start.apply(this, args);
+                        };
+                    }
+                    return Reflect.get(target, prop);
+                }
+            })];
+        }
+
+        function setupInterception() {
+            try {
+                const origPromiseAll = unsafeWindow.Promise.all;
+                let intercepted = false;
+                unsafeWindow.Promise.all = async function(promises) {
+                    const result = origPromiseAll.call(this, promises);
+                    if (!intercepted) {
+                        intercepted = true;
+                        return await new unsafeWindow.Promise((resolve) => {
+                            result.then(([kit, app, ...args]) => {
+                                const [success, created] = createKitProxy(kit);
+                                if (success) {
+                                    unsafeWindow.Promise.all = origPromiseAll;
+                                }
+                                resolve([created, app, ...args]);
+                            }).catch(() => resolve([kit, app, ...args]));
+                        });
+                    }
+                    return await result;
+                };
+            } catch (e) {
+                if (debug) console.warn('setupInterception failed', e);
+            }
+        }
+
+        try {
+            window.googletag = {
+                cmd: [],
+                _loaded_: true
+            };
+        } catch (_) {}
+
+        const blockedClasses = ["adsbygoogle", "adsense-wrapper", "inline-ad", "gpt-billboard-container", "[&:not(:first-child)]:mt-12", "lg:block"];
+        const blockedIds = ["billboard-1", "billboard-2", "billboard-3", "sidebar-ad-1", "skyscraper-ad-1"];
+
+        setupInterception();
+
+        const ob = new MutationObserver(mutations => {
+            for (const m of mutations) {
+                for (const node of m.addedNodes) {
+                    if (node.nodeType === 1) {
+                        try {
+                            blockedClasses.forEach((cls) => {
+                                if (node.classList?.contains(cls)) {
+                                    node.remove();
+                                    if (debug) console.log('[Debug]: Removed ad by class:', cls);
+                                }
+                                node.querySelectorAll?.(`.${CSS.escape(cls)}`).forEach((el) => {
+                                    el.remove();
+                                    if (debug) console.log('[Debug]: Removed nested ad by class:', cls);
+                                });
+                            });
+                            blockedIds.forEach((id) => {
+                                if (node.id === id) {
+                                    node.remove();
+                                    if (debug) console.log('[Debug]: Removed ad by id:', id);
+                                }
+                                node.querySelectorAll?.(`#${CSS.escape(id)}`).forEach((el) => {
+                                    el.remove();
+                                    if (debug) console.log('[Debug]: Removed nested ad by id:', id);
+                                });
+                            });
+                        } catch (e) {
+                            /* ignore CSS.escape errors in old browsers */
+                        }
+
+                        try {
+                            // detect GTD / big button
+                            if (node.matches && node.matches('button.large') && node.textContent && node.textContent.includes('Go To Destination')) {
+                                triggerBypass('gtd');
+                            }
+                        } catch (_) {}
+                    }
+                }
             }
         });
-    }
 
-    function createNodeProxy(node) {
-        return async (...args) => {
-            const result = await node(...args);
-            return new Proxy(result, {
-                get: (t, p) => p === 'component' ? createComponentProxy(t.component) : Reflect.get(t, p)
-            });
-        };
-    }
+        ob.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            attributes: false
+        });
 
-    function createKitProxy(kit) {
-        if (!kit?.start) return [false, kit];
-        return [true, new Proxy(kit, {
-            get(target, prop) {
-                if (prop === 'start') {
-                    return function(...args) {
-                        try {
-                            const [nodes, , opts] = args;
-                            if (nodes?.nodes && opts?.node_ids) {
-                                const idx = opts.node_ids[1];
-                                if (nodes.nodes[idx]) {
-                                    nodes.nodes[idx] = createNodeProxy(nodes.nodes[idx]);
-                                }
-                            }
-                        } catch (_) {}
-                        return kit.start.apply(this, args);
-                    };
-                }
-                return Reflect.get(target, prop);
-            }
-        })];
-    }
+        // Additional observer specifically for Workink "Go to Destination" button
+        const gtdObserver = new MutationObserver(() => {
+            try {
+                const gtdButton = document.querySelector('button.large.accessBtn');
+                if (gtdButton && gtdButton.textContent.includes('Go To Destination')) {
+                    const loader = gtdButton.querySelector('.loader-btn');
+                    const isDisabled = gtdButton.classList.contains('button-disabled');
 
-    function setupInterception() {
-        try {
-            const origPromiseAll = unsafeWindow.Promise.all;
-            let intercepted = false;
-            unsafeWindow.Promise.all = async function(promises) {
-                const result = origPromiseAll.call(this, promises);
-                if (!intercepted) {
-                    intercepted = true;
-                    return await new unsafeWindow.Promise((resolve) => {
-                        result.then(([kit, app, ...args]) => {
-                            const [success, created] = createKitProxy(kit);
-                            if (success) {
-                                unsafeWindow.Promise.all = origPromiseAll;
-                            }
-                            resolve([created, app, ...args]);
-                        }).catch(() => resolve([kit, app, ...args]));
-                    });
-                }
-                return await result;
-            };
-        } catch (e) {
-            if (debug) console.warn('setupInterception failed', e);
-        }
-    }
-
-    try {
-        window.googletag = {
-            cmd: [],
-            _loaded_: true
-        };
-    } catch (_) {}
-
-    const blockedClasses = ["adsbygoogle", "adsense-wrapper", "inline-ad", "gpt-billboard-container", "[&:not(:first-child)]:mt-12", "lg:block"];
-    const blockedIds = ["billboard-1", "billboard-2", "billboard-3", "sidebar-ad-1", "skyscraper-ad-1"];
-
-    setupInterception();
-
-    const ob = new MutationObserver(mutations => {
-        for (const m of mutations) {
-            for (const node of m.addedNodes) {
-                if (node.nodeType === 1) {
-                    try {
-                        blockedClasses.forEach((cls) => {
-                            if (node.classList?.contains(cls)) {
-                                node.remove();
-                                if (debug) console.log('[Debug]: Removed ad by class:', cls);
-                            }
-                            node.querySelectorAll?.(`.${CSS.escape(cls)}`).forEach((el) => {
-                                el.remove();
-                                if (debug) console.log('[Debug]: Removed nested ad by class:', cls);
-                            });
-                        });
-                        blockedIds.forEach((id) => {
-                            if (node.id === id) {
-                                node.remove();
-                                if (debug) console.log('[Debug]: Removed ad by id:', id);
-                            }
-                            node.querySelectorAll?.(`#${CSS.escape(id)}`).forEach((el) => {
-                                el.remove();
-                                if (debug) console.log('[Debug]: Removed nested ad by id:', id);
-                            });
-                        });
-                    } catch (e) {
-                        /* ignore CSS.escape errors in old browsers */
+                    // If button exists without loader showing or not disabled, captcha is solved
+                    if ((!loader || loader.style.display === 'none') && !isDisabled) {
+                        if (debug) console.log('[Debug] Workink captcha solved: Go to Destination button is ready');
+                        triggerBypass('gtd-ready');
                     }
-
-                    try {
-                        // detect GTD / big button
-                        if (node.matches && node.matches('button.large') && node.textContent && node.textContent.includes('Go To Destination')) {
-                            triggerBypass('gtd');
-                        }
-                    } catch (_) {}
                 }
+            } catch (e) {
+                if (debug) console.error('[Debug] GTD observer error:', e);
             }
-        }
-    });
+        });
 
-    ob.observe(document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: false
-    });
-
-    // Additional observer specifically for Workink "Go to Destination" button
-    const gtdObserver = new MutationObserver(() => {
-        try {
-            const gtdButton = document.querySelector('button.large.accessBtn');
-            if (gtdButton && gtdButton.textContent.includes('Go To Destination')) {
-                const loader = gtdButton.querySelector('.loader-btn');
-                const isDisabled = gtdButton.classList.contains('button-disabled');
-
-                // If button exists without loader showing or not disabled, captcha is solved
-                if ((!loader || loader.style.display === 'none') && !isDisabled) {
-                    if (debug) console.log('[Debug] Workink captcha solved: Go to Destination button is ready');
-                    triggerBypass('gtd-ready');
-                }
-            }
-        } catch (e) {
-            if (debug) console.error('[Debug] GTD observer error:', e);
-        }
-    });
-
-    gtdObserver.observe(document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['class', 'style']
-    });
-}
+        gtdObserver.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
+    }
 
 })();
