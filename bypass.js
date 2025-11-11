@@ -978,7 +978,7 @@ function handleVolcano() {
 
         try {
             if (!isVisibleAndEnabled(btn)) return false;
-            await new Promise(r => setTimeout(r, 2000)); // <-- 2-second delay before click
+            await new Promise(r => setTimeout(r, 4000)); // <-- 2-second delay before click
             if (panel) panel.show('redirectingToWork', 'info', `Redirecting to Work.ink...`);
             btn.click();
             await new Promise(r => setTimeout(r, 600));
