@@ -1,17 +1,3 @@
-// ==UserScript==
-// @name         Workink and Volcano bypasss
-// @namespace    http://tampermonkey.net/
-// @version      3.0.1.5
-// @description  bypasss workink and volcano key system
-// @author       elfuhh and imdyrian
-// @match        https://key.volcano.wtf/*
-// @match        https://work.ink/*
-// @run-at       document-start
-// @grant        unsafeWindow
-// @icon         https://cdn.discordapp.com/icons/1312680907559276576/bedc7397e04d863a9ee5c6087ece8ae8.png?size=80&quality=lossless
-// @downloadURL  https://github.com/elfuhh/bypass/raw/main/bypass.user.js
-// @updateURL    https://github.com/elfuhh/bypass/raw/main/bypass.user.js
-// ==/UserScript==
 (async () => {
         'use strict';
 
@@ -297,6 +283,8 @@
 }
 
 .status-dot.info { background: #3b82f6; color: #3b82f6; }
+.status-dot.social { background: #ef4444; color: #ef4444; }
+.status-dot.bypassing { background: #fbbf24; color: #fbbf24; }
 .status-dot.success { background: #10b981; color: #10b981; }
 .status-dot.warning { background: #f59e0b; color: #f59e0b; }
 .status-dot.error { background: #ef4444; color: #ef4444; }
@@ -809,16 +797,16 @@ input:checked + .toggle-slider:before {
 
             show(messageKeyOrTitle, typeOrSubtitle = 'info', replacements = {}) {
                 this.currentMessageKey = messageKeyOrTitle;
-                this.currentType = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
+                this.currentType = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'bypassing', 'social', 'warning', 'error'].includes(typeOrSubtitle)) ? typeOrSubtitle : 'info';
                 this.currentReplacements = replacements;
                 let message = '';
                 if (translations[currentLanguage] && translations[currentLanguage][messageKeyOrTitle]) {
                     message = t(messageKeyOrTitle, replacements);
-                    if (typeof typeOrSubtitle === 'string' && !['info', 'success', 'warning', 'error'].includes(typeOrSubtitle) && typeOrSubtitle.length > 0) {
+                    if (typeof typeOrSubtitle === 'string' && !['info', 'success', 'bypassing', 'social', 'warning', 'error'].includes(typeOrSubtitle) && typeOrSubtitle.length > 0) {
                         message = typeOrSubtitle;
                     }
                 } else {
-                    message = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'warning', 'error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
+                    message = (typeof typeOrSubtitle === 'string' && ['info', 'success', 'bypassing', 'social', 'warning', 'error'].includes(typeOrSubtitle)) ? messageKeyOrTitle : (typeOrSubtitle || messageKeyOrTitle);
                 }
                 if (this.statusText) this.statusText.textContent = message;
                 if (this.statusDot) this.statusDot.className = `status-dot ${this.currentType}`;
@@ -1105,7 +1093,7 @@ function handleWorkInk() {
         if (bypassTriggered) return;
         bypassTriggered = true;
         if (debug) console.log('[Debug] trigger Bypass via:', reason);
-        if (panel) panel.show('captchaSuccessBypassing', 'success');
+        if (panel) panel.show('captchaSuccessBypassing', 'bypassing');
 
         function keepSpoofing() {
             if (destinationReceived) return;
@@ -1138,7 +1126,9 @@ async function spoofSocials() {
 
     if (socials.length > 1) {
         socialCheckInProgress = true;
-        if (panel) panel.show('socialsdetected', 'info');
+
+        // Show initial count
+        if (panel) panel.show(`Spoofing socials: 0/${socials.length}`, 'social');
 
         // Log each social being spoofed
         for (let i = 0; i < socials.length; i++) {
@@ -1160,7 +1150,9 @@ async function spoofSocials() {
                     sendMessage.call(sessionController, types.ss, {
                         url: soc.url
                     });
-                    if (panel) panel.show('socialsdetected', 'warning');
+
+                    // Update panel with progress
+                    if (panel) panel.show(`Spoofing socials: ${i + 1}/${socials.length} (${platformName})`, 'social');
 
                     if (debug) console.log(`[Debug] ✓ Successfully spoofed ${platformName}`);
                 }
@@ -1168,9 +1160,9 @@ async function spoofSocials() {
                 if (debug) console.error(`[Debug] ✗ Error spoofing social ${i + 1}:`, e);
             }
 
-            // 500ms delay between each social (changed from 2000ms)
+            // 1 second delay between each social
             if (i < socials.length - 1) {
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 1500));
             }
         }
 
@@ -1181,42 +1173,18 @@ async function spoofSocials() {
             if (panel) panel.show('reloading', 'info');
             if (debug) console.log('[Debug] Reloading page after social spoof...');
             window.location.reload();
-        }, 2000);
+        }, 1500);
     } else if (socials.length === 1) {
-        // Handle single social case
-        if (debug) console.log('[Debug] Only 1 social detected, spoofing...');
-        socialCheckInProgress = true;
-
-        const soc = socials[0];
-        try {
-            let platformName = 'Unknown';
-            try {
-                const url = new URL(soc.url);
-                platformName = url.hostname.replace('www.', '').split('.')[0];
-                platformName = platformName.charAt(0).toUpperCase() + platformName.slice(1);
-            } catch (e) {
-                platformName = soc.url.substring(0, 30) + '...';
-            }
-
-            if (debug) console.log(`[Debug] Spoofing social 1/1: ${platformName} (${soc.url})`);
-
-            if (sendMessage) {
-                sendMessage.call(sessionController, types.ss, {
-                    url: soc.url
-                });
-                if (debug) console.log(`[Debug] ✓ Successfully spoofed ${platformName}`);
-            }
-        } catch (e) {
-            if (debug) console.error('[Debug] ✗ Error spoofing social:', e);
-        }
-
-        // Continue with bypass instead of reloading for single social
-        if (debug) console.log('[Debug] Single social complete, continuing bypass...');
+        // Handle single social case - requires captcha
+        if (debug) console.log('[Debug] Only 1 social detected, waiting for captcha...');
         triggerBypass('social-check-complete');
+        // Don't spoof automatically, let captcha solve first
+        return;
     } else {
         // No socials to spoof
-        if (debug) console.log('[Debug] No socials detected, continuing bypass...');
+        if (debug) console.log('[Debug] No socials detected, waiting for captcha...');
         triggerBypass('social-check-complete');
+        return;
     }
 }
     function spoofWorkink() {
