@@ -8,7 +8,7 @@
         const host = location.hostname;
         const defaultTime = 8;
         const normalTime = 60;
-        const ver = "3.0.1.5";
+        const ver = "3.0.3.0";
         const debug = true;
 
         // ---------- language & translations ----------
@@ -28,7 +28,7 @@
                 bypassSuccess: "Bypass thành công",
                 backToCheckpoint: "Đang về lại Checkpoint...",
                 captchaSuccessBypassing: "CAPTCHA đã thành công, đang bypass...",
-                version: "Phiên bản 3.0.1.5",
+                version: "Phiên bản 3.0.3.0",
                 madeBy: "Được tạo bởi DyRian và elfuhh (dựa trên IHaxU)",
                 autoRedirect: "Tự động chuyển hướng"
             },
@@ -48,7 +48,7 @@
                 bypassSuccess: "Bypass successful",
                 backToCheckpoint: "Returning to checkpoint...",
                 captchaSuccessBypassing: "CAPTCHA solved successfully, bypassing...",
-                version: "Version 3.0.1.5",
+                version: "Version 3.0.3.0",
                 madeBy: "Made by DyRian and elfuhh (based on IHaxU)",
                 autoRedirect: "Auto-redirect"
             }
