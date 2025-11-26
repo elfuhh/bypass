@@ -922,6 +922,8 @@ try {
 
 if (host.includes("key.volcano.wtf")) handleVolcano();
 else if (host.includes("work.ink")) handleWorkInk();
+else if (host.includes("ads.luarmor.net")) handleLuarmor();
+
 
 // ---------- Full Volcano handler ----------
     function handleVolcano() {
@@ -1547,5 +1549,527 @@ async function spoofSocials() {
         attributeFilter: ['class', 'style']
     });
 }
+function handleLuarmor() {
+    if (panel) panel.show('pleaseSolveCaptcha', 'info');
+    if (debug) console.log('[Debug] Luarmor: Handler started');
 
+    let cloudflareAttempted = false;
+    let captchaSolved = false;
+    let startButtonClicked = false;
+    let nextButtonClicked = false; // NEW: Track if Next was clicked
+    let checkpointActive = false;
+    let currentCheckpoint = 0;
+    let isProcessing = false;
+    let captchaCheckInterval = null;
+    let processComplete = false;
+
+    // Improved button detection and clicking
+    function waitForElement(selector, timeout = 10000) {
+        return new Promise((resolve) => {
+            const startTime = Date.now();
+            const checkInterval = setInterval(() => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    clearInterval(checkInterval);
+                    resolve(element);
+                } else if (Date.now() - startTime > timeout) {
+                    clearInterval(checkInterval);
+                    resolve(null);
+                }
+            }, 100);
+        });
+    }
+
+    function isElementClickable(element) {
+        if (!element) return false;
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        const disabled = element.disabled ||
+                        element.getAttribute("aria-disabled") === "true" ||
+                        element.hasAttribute('disabled') ||
+                        element.classList.contains('disabled');
+        const visible = style.display !== "none" &&
+                       style.visibility !== "hidden" &&
+                       style.opacity !== "0" &&
+                       element.offsetParent !== null &&
+                       rect.width > 0 && rect.height > 0;
+
+        return visible && !disabled;
+    }
+
+    async function clickElement(element, description) {
+        if (!element) {
+            if (debug) console.warn(`[Debug] Luarmor: ${description} - element not found`);
+            return false;
+        }
+
+        if (debug) console.log(`[Debug] Luarmor: ${description} - attempting click`);
+
+        if (!isElementClickable(element)) {
+            if (debug) console.warn(`[Debug] Luarmor: ${description} - element not clickable`);
+            return false;
+        }
+
+        try {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // REMOVED: await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Try onclick attribute first
+            const onclickAttr = element.getAttribute('onclick');
+            if (onclickAttr) {
+                if (debug) console.log(`[Debug] Luarmor: ${description} - executing onclick`);
+                try {
+                    const funcMatch = onclickAttr.match(/^(\w+)\(\)/);
+                    if (funcMatch && typeof window[funcMatch[1]] === 'function') {
+                        window[funcMatch[1]]();
+                        if (debug) console.log(`[Debug] Luarmor: ${description} - onclick executed`);
+                        return true;
+                    }
+                } catch (e) {
+                    if (debug) console.warn(`[Debug] onclick execution error:`, e);
+                }
+            }
+
+            element.click();
+            if (debug) console.log(`[Debug] Luarmor: ${description} - click executed`);
+            return true;
+        } catch (err) {
+            if (debug) console.error(`[Debug] Luarmor: ${description} - click error:`, err);
+            return false;
+        }
+    }
+
+    // Handle Cloudflare captcha
+    async function handleCloudflareCaptcha() {
+        if (cloudflareAttempted) return false;
+
+        const isCfChallenge = document.title.includes('Just a moment') ||
+                             document.querySelector('#challenge-stage') ||
+                             document.querySelector('.cf-browser-verification');
+
+        if (!isCfChallenge) {
+            if (debug) console.log('[Debug] Luarmor: Not a Cloudflare page');
+            cloudflareAttempted = true;
+            return false;
+        }
+
+        if (panel) panel.show('Cloudflare detected, waiting...', 'warning');
+        if (debug) console.log('[Debug] Luarmor: Cloudflare challenge detected');
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        const cfSelectors = [
+            '#challenge-stage button[type="submit"]',
+            'button[type="submit"]',
+            'input[type="submit"]',
+            '.cf-turnstile button'
+        ];
+
+        for (const selector of cfSelectors) {
+            const cfButton = document.querySelector(selector);
+            if (cfButton && isElementClickable(cfButton)) {
+                const btnText = (cfButton.textContent || cfButton.value || '').toLowerCase();
+                if (btnText.includes('verify') || btnText.includes('continue') || btnText.includes('submit')) {
+                    cloudflareAttempted = true;
+                    if (panel) panel.show('Clicking Cloudflare verify...', 'bypassing');
+
+                    // REMOVED: await new Promise(resolve => setTimeout(resolve, 500));
+
+                    if (await clickElement(cfButton, 'Cloudflare verify')) {
+                        if (panel) panel.show('Cloudflare submitted!', 'success');
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        return true;
+                    }
+                }
+            }
+        }
+
+        cloudflareAttempted = true;
+        return false;
+    }
+
+    async function waitForCaptchaSolution() {
+        if (captchaSolved) return;
+
+        const isCfPage = document.title.includes('Just a moment') || document.querySelector('#challenge-stage');
+        if (!isCfPage) {
+            if (panel) panel.show('Waiting for CAPTCHA...', 'warning');
+            if (debug) console.log('[Debug] Luarmor: Waiting for user to solve CAPTCHA');
+        }
+
+        // Clear any existing interval
+        if (captchaCheckInterval) {
+            clearInterval(captchaCheckInterval);
+        }
+
+        let checkCount = 0;
+        captchaCheckInterval = setInterval(() => {
+            checkCount++;
+
+            // Skip if still on Cloudflare
+            const stillOnCf = document.title.includes('Just a moment') || document.querySelector('#challenge-stage');
+            if (stillOnCf) return;
+
+            // Method 1: Check for captcha iframe disappearance
+            const hcaptchaIframe = document.querySelector('iframe[src*="hcaptcha"]');
+            const recaptchaIframe = document.querySelector('iframe[src*="recaptcha"]');
+            const turnstileIframe = document.querySelector('iframe[src*="turnstile"]');
+
+            // Method 2: Check for captcha container visibility
+            const hcaptchaContainer = document.querySelector('.h-captcha');
+            const recaptchaContainer = document.querySelector('.g-recaptcha');
+
+            // Method 3: Check for response tokens
+            const hcaptchaResponse = document.querySelector('[name="h-captcha-response"]');
+            const recaptchaResponse = document.querySelector('[name="g-recaptcha-response"]');
+            const hasToken = (hcaptchaResponse?.value && hcaptchaResponse.value.length > 0) ||
+                           (recaptchaResponse?.value && recaptchaResponse.value.length > 0);
+
+            // Method 4: Check if Start button is enabled AND detect its type
+            const startBtn = document.querySelector('button#nextbtn');
+            let startButtonReady = false;
+            let detectedButtonType = null;
+
+            if (startBtn) {
+                detectedButtonType = detectButtonType(startBtn);
+                const isClickable = isElementClickable(startBtn);
+
+                // Button is ready if it's any valid type and is clickable
+                startButtonReady = (detectedButtonType !== null) && isClickable;
+
+                if (debug && checkCount % 10 === 0) {
+                    console.log(`[Debug] Button check: type=${detectedButtonType}, clickable=${isClickable}, ready=${startButtonReady}`);
+                }
+            }
+
+            // Method 5: Check if captcha containers are hidden
+            const captchaHidden = (hcaptchaContainer && getComputedStyle(hcaptchaContainer).display === 'none') ||
+                                (recaptchaContainer && getComputedStyle(recaptchaContainer).display === 'none');
+
+            // Log detection status periodically
+            if (debug && checkCount % 10 === 0) {
+                console.log(`[Debug] Captcha check ${checkCount}: token=${hasToken}, btnReady=${startButtonReady}, hidden=${captchaHidden}`);
+            }
+
+            // Captcha is solved if ANY of these conditions are true:
+            if (hasToken || startButtonReady || captchaHidden) {
+                clearInterval(captchaCheckInterval);
+                captchaCheckInterval = null;
+                captchaSolved = true;
+
+                if (debug) console.log('[Debug] Luarmor: CAPTCHA solved! (token:', hasToken, 'btnReady:', startButtonReady, 'hidden:', captchaHidden, ')');
+                if (panel) panel.show('CAPTCHA solved! Checking necessary steps...', 'success');
+
+                setTimeout(() => handleStartButton(), 0);
+            }
+
+            // Timeout after 5 minutes
+            if (checkCount > 600) {
+                clearInterval(captchaCheckInterval);
+                captchaCheckInterval = null;
+                if (debug) console.warn('[Debug] Luarmor: CAPTCHA check timeout');
+                if (panel) panel.show('CAPTCHA timeout - please refresh', 'error');
+            }
+        }, 500);
+    }
+
+    // Detect button type by icon and check if it's actually ready
+    function detectButtonType(button) {
+        if (!button) return null;
+
+        const icon = button.querySelector('i.material-icons, i');
+        const buttonText = button.textContent.trim();
+
+        if (!icon) {
+            if (debug) console.warn('[Debug] No icon found in button');
+            return null;
+        }
+
+        const iconText = icon.textContent.trim();
+
+        // Check if button is actually enabled/ready
+        const isDisabled = button.disabled ||
+                          button.classList.contains('disabled') ||
+                          button.classList.contains('button-disabled') ||
+                          button.getAttribute('aria-disabled') === 'true' ||
+                          button.hasAttribute('disabled');
+
+        const style = getComputedStyle(button);
+        const isVisible = style.display !== 'none' &&
+                         style.visibility !== 'hidden' &&
+                         style.opacity !== '0';
+
+        // Check for loading state
+        const hasLoader = button.querySelector('.loader, .loader-btn, .spinner');
+        const isLoading = hasLoader && (hasLoader.style.display !== 'none');
+
+        if (debug) console.log(`[Debug] Button state - Icon: "${iconText}", Text: "${buttonText}", Disabled: ${isDisabled}, Visible: ${isVisible}, Loading: ${isLoading}`);
+
+        // Don't detect if button is not ready
+        if (isDisabled || !isVisible || isLoading) {
+            if (debug) console.log('[Debug] Button not ready (disabled, invisible, or loading)');
+            return null;
+        }
+
+        // Detect button type based on icon
+        if (iconText === 'open_in_new' || iconText.includes('open_in_new')) {
+            return 'start';
+        } else if (iconText === 'fast_forward' || iconText.includes('fast_forward')) {
+            return 'next';
+        } else if (iconText === 'done' || iconText.includes('done')) {
+            return 'done';
+        }
+
+        // Fallback to text content
+        if (buttonText.includes('Start')) return 'start';
+        if (buttonText.includes('Next')) return 'next';
+        if (buttonText.includes('Done') || buttonText.includes('Finish')) return 'done';
+
+        if (debug) console.warn(`[Debug] Unknown button type - Icon: "${iconText}", Text: "${buttonText}"`);
+        return null;
+    }
+
+    // Handle Start/Continue button - ONLY CLICKS ONCE
+    async function handleStartButton() {
+        if (startButtonClicked || processComplete) {
+            if (debug) console.log('[Debug] Luarmor: Start button already clicked or process complete');
+            return;
+        }
+
+        // REMOVED: await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const startBtn = document.querySelector('button#nextbtn');
+        if (!startBtn) {
+            if (debug) console.warn('[Debug] Luarmor: Start button not found, retrying...');
+            if (!processComplete) setTimeout(handleStartButton, 1500);
+            return;
+        }
+
+        const buttonType = detectButtonType(startBtn);
+
+        if (debug) console.log(`[Debug] Detected button type: ${buttonType}`);
+
+        if (buttonType === 'start' && isElementClickable(startBtn)) {
+            if (panel) panel.show('Clicking Start button...', 'bypassing');
+            if (debug) console.log('[Debug] Luarmor: Clicking start button');
+
+            startButtonClicked = true; // Mark as clicked BEFORE attempting
+
+            const clickSuccess = await clickElement(startBtn, 'Start button');
+            if (clickSuccess) {
+                if (panel) panel.show('Start clicked! Monitoring for Next...', 'info');
+                if (debug) console.log('[Debug] Luarmor: Start button clicked successfully - WILL NOT CLICK AGAIN');
+
+                // REMOVED: await new Promise(resolve => setTimeout(resolve, 4000));
+                startCheckpointProcess();
+            } else {
+                if (debug) console.warn('[Debug] Luarmor: Failed to click start button - NOT RETRYING');
+            }
+        } else if (buttonType === 'next') {
+            if (debug) console.log('[Debug] Luarmor: Found Next button, starting checkpoint process');
+            startButtonClicked = true;
+            startCheckpointProcess();
+        } else if (buttonType === 'done') {
+            if (debug) console.log('[Debug] Luarmor: Found Done button immediately, completing');
+            startButtonClicked = true;
+            processComplete = true;
+            await handleCompletion();
+        } else {
+            if (debug) console.warn('[Debug] Luarmor: Button not ready or unknown type, retrying...');
+            if (!processComplete) setTimeout(handleStartButton, 1500);
+        }
+    }
+
+    // Process checkpoints - ONLY CLICKS NEXT ONCE
+    async function processNextCheckpoint() {
+        if (isProcessing || processComplete || nextButtonClicked) {
+            if (debug) console.log('[Debug] Already processing, process complete, or next already clicked');
+            return processComplete;
+        }
+
+        isProcessing = true;
+
+        try {
+            // REMOVED: await new Promise(resolve => setTimeout(resolve, 1000));
+
+            const nextBtn = document.querySelector('button#nextbtn');
+            if (!nextBtn) {
+                if (debug) console.warn('[Debug] No nextbtn found');
+                isProcessing = false;
+                return false;
+            }
+
+            const buttonType = detectButtonType(nextBtn);
+
+            if (debug) console.log(`[Debug] Processing checkpoint - Button type: ${buttonType}`);
+
+            // If no valid button type detected (button not ready), wait and retry
+            if (buttonType === null) {
+                if (debug) console.log('[Debug] Button not ready yet, will retry');
+                isProcessing = false;
+                return false;
+            }
+
+            if (buttonType === 'done') {
+                if (debug) console.log('[Debug] Luarmor: Found Done button, completing process');
+                if (panel) panel.show('All checkpoints complete!', 'success');
+                processComplete = true;
+                isProcessing = false;
+
+                // REMOVED: await new Promise(resolve => setTimeout(resolve, 1500));
+                await handleCompletion();
+                return true;
+            }
+
+            if (buttonType === 'next') {
+                // Check if we already clicked Next
+                if (nextButtonClicked) {
+                    if (debug) console.log('[Debug] Next button already clicked - NOT CLICKING AGAIN');
+                    isProcessing = false;
+                    return false;
+                }
+
+                // Double-check the button is actually clickable before attempting
+                if (!isElementClickable(nextBtn)) {
+                    if (debug) console.log('[Debug] Next button exists but not clickable yet, waiting...');
+                    isProcessing = false;
+                    return false;
+                }
+
+                currentCheckpoint++;
+                if (panel) panel.show(`Clicking Next (checkpoint ${currentCheckpoint})...`, 'bypassing');
+                if (debug) console.log(`[Debug] Clicking Next checkpoint ${currentCheckpoint}`);
+
+                nextButtonClicked = true; // Mark as clicked BEFORE attempting
+
+                if (await clickElement(nextBtn, `Next checkpoint ${currentCheckpoint}`)) {
+                    if (debug) console.log(`[Debug] Checkpoint ${currentCheckpoint} clicked successfully - WILL NOT CLICK AGAIN`);
+                    if (panel) panel.show('Next clicked! Monitoring for Done...', 'info');
+
+                    // REMOVED: await new Promise(resolve => setTimeout(resolve, 6000));
+                    isProcessing = false;
+                    return false;
+                } else {
+                    if (debug) console.warn(`[Debug] Failed to click checkpoint ${currentCheckpoint} - NOT RETRYING`);
+                    isProcessing = false;
+                    return false;
+                }
+            }
+
+            // If button is 'start', we shouldn't be here
+            if (buttonType === 'start') {
+                if (debug) console.error('[Debug] Unexpected: Found start button during checkpoint processing');
+                isProcessing = false;
+                return false;
+            }
+
+            if (debug) console.log(`[Debug] Button type "${buttonType}" not handled, waiting...`);
+            isProcessing = false;
+            return false;
+
+        } catch (e) {
+            if (debug) console.error('[Debug] Luarmor: Error in processNextCheckpoint:', e);
+            isProcessing = false;
+            return false;
+        }
+    }
+
+    async function startCheckpointProcess() {
+        if (checkpointActive || processComplete) {
+            if (debug) console.log('[Debug] Checkpoint process already active or complete');
+            return;
+        }
+
+        checkpointActive = true;
+
+        if (debug) console.log('[Debug] Luarmor: Starting checkpoint loop');
+        if (panel) panel.show('Checking Necessary Actions...', 'bypassing');
+
+        async function checkpointLoop() {
+            // Stop immediately if process is complete
+            if (processComplete) {
+                if (debug) console.log('[Debug] Process complete flag detected, stopping loop');
+                checkpointActive = false;
+                return;
+            }
+
+            const completed = await processNextCheckpoint();
+
+            if (completed) {
+                if (debug) console.log('[Debug] Luarmor: Checkpoint loop completed - stopping permanently');
+                checkpointActive = false;
+                processComplete = true;
+                return;
+            }
+
+            // Only continue if not complete
+            if (!processComplete) {
+                setTimeout(checkpointLoop, 3000);
+            } else {
+                if (debug) console.log('[Debug] Process complete, not scheduling next loop');
+                checkpointActive = false;
+            }
+        }
+
+        // Start the loop
+        checkpointLoop();
+    }
+
+    async function handleCompletion() {
+        if (debug) console.log('[Debug] Luarmor: Handling completion');
+
+        // Set completion flag FIRST to stop any loops
+        processComplete = true;
+        checkpointActive = false;
+
+        if (debug) console.log('[Debug] Set processComplete=true and checkpointActive=false');
+
+        // REMOVED: await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Look for the "Get New Key" button
+        const newKeyBtn = document.querySelector('button#newkeybtn');
+
+        // Also check for copy button as alternative completion indicator
+        const copyKeyBtn = document.querySelector('button[onclick*="copy"], .copy-key-btn, #copy-key-btn');
+
+        if (newKeyBtn && isElementClickable(newKeyBtn)) {
+            if (panel) panel.show('Getting new key...', 'success');
+            if (debug) console.log('[Debug] Luarmor: Found and clicking new key button');
+
+            if (await clickElement(newKeyBtn, 'Get new key')) {
+                if (panel) panel.show(' Bypass complete! Key obtained..', 'success');
+                if (debug) console.log('[Debug] Luarmor:  Bypass complete - key obtained');
+                return;
+            }
+        } else if (copyKeyBtn) {
+            if (debug) console.log('[Debug] Luarmor: Found copy key button, attempting to copy');
+            if (await clickElement(copyKeyBtn, 'Copy key')) {
+                if (panel) panel.show(' Key copied! Process complete.', 'success');
+                if (debug) console.log('[Debug] Luarmor:  Key copied successfully');
+                return;
+            }
+        } else {
+            if (debug) console.warn('[Debug] Luarmor: No completion button found');
+            if (panel) panel.show(' Process complete! Check for key on page.', 'success');
+        }
+
+        // CRITICAL: Ensure we absolutely do NOT redirect
+        if (debug) console.log('[Debug] Luarmor:  STAYING ON PAGE - NO REDIRECT ');
+
+        // Clear any intervals or timeouts that might cause redirects
+        if (captchaCheckInterval) {
+            clearInterval(captchaCheckInterval);
+            captchaCheckInterval = null;
+        }
+    }
+
+    // Start the process
+    (async () => {
+        // REMOVED: await new Promise(resolve => setTimeout(resolve, 1000));
+        await handleCloudflareCaptcha();
+        await waitForCaptchaSolution();
+    })();
+
+    if (debug) console.log('[Debug] Luarmor: Handler initialized');
+}
 })();
