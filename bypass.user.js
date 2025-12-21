@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Workink and Volcano bypass
 // @namespace    http://tampermonkey.net/
-// @version      5.0.0.0
+// @version      6.7.0.0
 // @description  bypasss workink and volcano key system
 // @author       Dyrian and elfuhh
 // @match        https://key.volcano.wtf/*
